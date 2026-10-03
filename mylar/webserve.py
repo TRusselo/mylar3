@@ -6286,14 +6286,14 @@ class WebInterface(object):
 
     def comicScan(self, path, scan=0, libraryscan=0, redirect=None, autoadd=0, imp_move=0, imp_paths=0, imp_rename=0, imp_metadata=0, imp_seriesfolders=0, forcescan=0):
         importoptions = {'comic_dir':              path,
-                         'imp_move':               bool(imp_move),
-                         'imp_rename':             bool(imp_rename),
-                         'imp_metadata':           bool(imp_metadata),
-                         'imp_paths':              bool(imp_paths),
-                         'imp_seriesfolders':      bool(imp_seriesfolders),
-                         'add_comics':             bool(autoadd)}
+                         'imp_move':               helpers.str_to_bool(imp_move),
+                         'imp_rename':             helpers.str_to_bool(imp_rename),
+                         'imp_metadata':           helpers.str_to_bool(imp_metadata),
+                         'imp_paths':              helpers.str_to_bool(imp_paths),
+                         'imp_seriesfolders':      helpers.str_to_bool(imp_seriesfolders),
+                         'add_comics':             helpers.str_to_bool(autoadd)}
 
-        if bool(scan) is True:
+        if helpers.str_to_bool(scan) is True:
             #don't let a second scan start while one is running - two concurrent scans double up the importresults rows.
             with importstatus.START_LOCK:
                 busy = importstatus.running()
@@ -6310,7 +6310,7 @@ class WebInterface(object):
         mylar.CONFIG.writeconfig(values=importoptions)
 
         #thread the scan.
-        if bool(scan) is True:
+        if helpers.str_to_bool(scan) is True:
             mylar.IMPORT_STATUS = 'Now starting the import'
             threading.Thread(target=self.ThreadcomicScan, name="LibraryScan", args=[True]).start()
             return 'Import Scan now submitted.'

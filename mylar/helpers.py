@@ -65,6 +65,11 @@ def multikeysort(items, columns):
 
     return sorted(items, cmp=comparer)
 
+def str_to_bool(value):
+    if isinstance(value, str):
+        return value.strip().lower() in ('1', 'true', 'yes', 'on', 'checked')
+    return bool(value)
+
 def checked(variable):
     if variable:
         return 'Checked'
