@@ -79,7 +79,7 @@ def start(mode, message=None):
 
 def phase(name, message=None):
     with _lock:
-        if _state['mode'] is None:
+        if _state['phase'] == 'idle':
             return
         _state['phase'] = name
         _state['phase_started'] = time.time()
