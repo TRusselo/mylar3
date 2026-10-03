@@ -412,6 +412,13 @@ def GetComicInfo(comicid, dom, safechk=None, series=False):
        logger.error('Unable to add / refresh the series due to inablity to retrieve data from ComicVine. You might want to try abit later and/or make sure ComicVine is up.')
        return
     try:
+       nores = dom.getElementsByTagName('number_of_total_results')[0].firstChild.wholeText.strip() == '0'
+    except Exception:
+       nores = False
+    if nores:
+       logger.error('ComicVine returned no data for %s (object not found) - unable to add / refresh the series.' % comicid)
+       return
+    try:
         cntit = dom.getElementsByTagName('count_of_issues')[0].firstChild.wholeText
     except:
         cntit = len(tracks)
