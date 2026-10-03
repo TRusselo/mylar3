@@ -1830,9 +1830,10 @@ def forceRescan(ComicID, archive=None, module=None, recheck=False):
     arcissues = myDB.select("SELECT count(*) FROM issues WHERE ComicID=? and Status='Archived'", [ComicID])
     if int(arcissues[0][0]) > 0:
         arcfiles = arcissues[0][0]
-    arcannuals = myDB.select("SELECT count(*) FROM annuals WHERE ComicID=? and Status='Archived' AND NOT Deleted", [ComicID])
-    if int(arcannuals[0][0]) > 0:
-        arcanns = arcannuals[0][0]
+    if mylar.CONFIG.ANNUALS_ON:
+        arcannuals = myDB.select("SELECT count(*) FROM annuals WHERE ComicID=? and Status='Archived' AND NOT Deleted", [ComicID])
+        if int(arcannuals[0][0]) > 0:
+            arcanns = arcannuals[0][0]
 
     if havefiles == 0:
         if arcfiles > 0 or arcanns > 0:
@@ -1855,8 +1856,10 @@ def forceRescan(ComicID, archive=None, module=None, recheck=False):
     ignorecount = 0
     if mylar.CONFIG.IGNORE_HAVETOTAL:   # if this is enabled, will increase Have total as if in Archived Status
         ignoresi = myDB.select("SELECT count(*) FROM issues WHERE ComicID=? AND Status='Ignored'", [ComicID])
-        ignoresa = myDB.select("SELECT count(*) FROM annuals WHERE ComicID=? AND Status='Ignored' AND NOT Deleted", [ComicID])
-        ignorecount = int(ignoresi[0][0]) + int(ignoresa[0][0])
+        ignorecount = int(ignoresi[0][0])
+        if mylar.CONFIG.ANNUALS_ON:
+            ignoresa = myDB.select("SELECT count(*) FROM annuals WHERE ComicID=? AND Status='Ignored' AND NOT Deleted", [ComicID])
+            ignorecount += int(ignoresa[0][0])
         if ignorecount > 0:
             havefiles = havefiles + ignorecount
             logger.fdebug(
@@ -1952,8 +1955,10 @@ def forceRescan(ComicID, archive=None, module=None, recheck=False):
     if mylar.CONFIG.IGNORE_TOTAL:
         # if this is enabled, will increase Have total as if in Archived Status
         ignoresa = myDB.select("SELECT count(*) FROM issues WHERE ComicID=? AND Status='Ignored'", [ComicID])
-        ignoresb = myDB.select("SELECT count(*) FROM annuals WHERE ComicID=? AND Status='Ignored' AND NOT Deleted", [ComicID])
-        ignorecnt = ignoresa[0][0] + ignoresb[0][0]
+        ignorecnt = ignoresa[0][0]
+        if mylar.CONFIG.ANNUALS_ON:
+            ignoresb = myDB.select("SELECT count(*) FROM annuals WHERE ComicID=? AND Status='Ignored' AND NOT Deleted", [ComicID])
+            ignorecnt += ignoresb[0][0]
 
         if ignorecnt > 0:
             combined_total -= ignorecnt
