@@ -10,6 +10,15 @@ It will also allow you to monitor weekly pull-lists for items belonging to said 
 
 This is the community continuity fork of mylar - originally located at https://github.com/mylar3/mylar3.
 
+### TRusselo/mylar3
+This is a maintained fork of [MylarComics/mylar3](https://github.com/MylarComics/mylar3) (`stable`) on the `trusselo` branch, adding:
+- a Library Scan / Import status panel (Manage > Activity / Jobs and Settings > Information), live log tail, stop / resume controls and a header indicator
+- ComicVine rate-limit handling (waits out HTTP 420 / "Slow down cowboy" instead of treating it as no results)
+- mass imports that resume automatically after a restart, and a guard against concurrent library scans
+- fixes for the Discord test notification, `cmd=refreshComic` and the weekly pull week number
+
+Docker image: `ghcr.io/trusselo/mylar3:latest` - a drop-in replacement for `lscr.io/linuxserver/mylar3` (same s6 base, `PUID`/`PGID`/`UMASK`/`TZ`, `/config` with data in `/config/mylar`, port 8090). Mount `/comics` and `/downloads` as before.
+
 ## Installation
 Install it via git clone or via [Docker](https://hub.docker.com/r/linuxserver/mylar3)
 

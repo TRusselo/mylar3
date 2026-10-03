@@ -1,0 +1,10 @@
+.git
+.github
+.devcontainer
+.vscode
+**/__pycache__
+**/*.py[co]
+tests
+screens
+Dockerfile
+.dockerignore
