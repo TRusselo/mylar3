@@ -164,9 +164,12 @@ def addComictoDB(comicid, mismatch=None, pullupd=None, imported=None, ogcname=No
     if dbcomic is None or bypass is False:
         newValueDict = {"ComicName":   "Comic ID: %s" % (comicid),
                 "Status":   "Loading"}
-        if all([imported is not None, imported != 'None', mylar.CONFIG.IMP_PATHS is True]):
+        # when importing without moving, the files stay put - so the series has to live where
+        # they are, otherwise an empty folder gets created and recorded as the series location.
+        if all([imported is not None, imported != 'None', mylar.CONFIG.IMP_PATHS is True or mylar.CONFIG.IMP_MOVE is False]):
             try:
-                comlocation = os.path.dirname(imported['filelisting'][0]['comiclocation'])
+                dirs = [os.path.dirname(f['comiclocation']) for f in imported['filelisting']]
+                comlocation = max(set(dirs), key=dirs.count)
             except Exception as e:
                 comlocation = None
         else:
