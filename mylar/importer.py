@@ -544,9 +544,9 @@ def addComictoDB(comicid, mismatch=None, pullupd=None, imported=None, ogcname=No
     if CV_NoYearGiven == 'no':
         #if set to 'no' then we haven't pulled down the issues, otherwise we did it already
         issued = cv.getComic(comicid, 'issue')
-        if issued is None:
-            logger.warn('Unable to retrieve data from ComicVine. Get your own API key already!')
-            return {'status': 'incomplete'}
+    if not issued:
+        logger.warn('Unable to retrieve issue data from ComicVine for %s [%s] - leaving the series to be refreshed again later.' % (comic['ComicName'], comicid))
+        return {'status': 'incomplete'}
     logger.info('Successfully retrieved issue details for ' + comic['ComicName'])
 
     #move to own function so can call independently to only refresh issue data
@@ -560,7 +560,7 @@ def addComictoDB(comicid, mismatch=None, pullupd=None, imported=None, ogcname=No
         pass
 
     # Ensure that the expected keys are present in the updateddata dictionary
-    if 'issuedata' not in updateddata or updateddata['issuedata'] is None:
+    if not updateddata or updateddata.get('issuedata') is None:
         logger.warn(
             'Unable to complete Refreshing / Adding issue data - this WILL create future problems if not addressed.')
         return {'status': 'incomplete'}
@@ -1349,7 +1349,7 @@ def updateissuedata(comicid, comicname=None, issued=None, comicIssues=None, call
     #chkType comes from the weeklypulllist - either 'annual' or not to distinguish annuals vs. issues
     if comicIssues is None:
         comic = cv.getComic(comicid, 'comic', series=True)
-        if comic is None:
+        if not comic:
             logger.warn('Error retrieving from ComicVine - either the site is down or you are not using your own CV API key')
             return {'status': 'failure'}
 
@@ -1361,7 +1361,7 @@ def updateissuedata(comicid, comicname=None, issued=None, comicIssues=None, call
             comicname = comic['ComicName']
     if issued is None:
         issued = cv.getComic(comicid, 'issue')
-        if issued is None:
+        if not issued:
             logger.warn('Error retrieving from ComicVine - either the site is down or you are not using your own CV API key')
             return {'status': 'failure'}
 
