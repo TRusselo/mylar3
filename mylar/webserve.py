@@ -6228,12 +6228,13 @@ class WebInterface(object):
         marker = importstatus.load_resume()
         if auto and marker is None:
             return False, 'Nothing to resume.'
+        if importstatus.running() or mylar.IMPORTLOCK:
+            return False, 'A library scan or import is already running.'
         myDB = db.DBConnection()
-        if marker is not None:
-            # a series that was mid-import when Mylar stopped is left as 'Importing' - put it back in the queue
-            reset = myDB.action("UPDATE importresults SET Status='Not Imported' WHERE Status='Importing'")
-            if reset is not None and reset.rowcount:
-                logger.info('[IMPORT] Reset %s file(s) left mid-import back to Not Imported.' % reset.rowcount)
+        # a series that was mid-import when Mylar stopped (or whose add failed) is left as 'Importing' - put it back in the queue
+        reset = myDB.action("UPDATE importresults SET Status='Not Imported' WHERE Status='Importing'")
+        if reset is not None and reset.rowcount:
+            logger.info('[IMPORT] Reset %s file(s) left mid-import back to Not Imported.' % reset.rowcount)
         cnames = myDB.select("SELECT ComicName, ComicID, Volume, DynamicName from importresults WHERE Status='Not Imported' GROUP BY DynamicName, Volume")
         wanted = None
         action = 'massimport'
