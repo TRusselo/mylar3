@@ -59,7 +59,7 @@ RUN \
 # add mylar
 COPY . /app/mylar3/
 RUN \
-  printf " (HEAD -> %s)\n%s\n" "${MYLAR3_BRANCH}" "${MYLAR3_COMMIT}" > /app/mylar3/.LAST_RELEASE && \
+  printf " (%s)\n%s\n" "${MYLAR3_BRANCH}" "${MYLAR3_COMMIT}" > /app/mylar3/.LAST_RELEASE && \
   rm -rf /app/mylar3/docker && \
   printf "TRusselo/mylar3 version: ${VERSION}\nBuild-date: ${BUILD_DATE}" > /build_version
 
