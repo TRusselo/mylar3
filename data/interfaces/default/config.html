@@ -1,4 +1,5 @@
 <%inherit file="base.html"/>
+<%namespace file="importstatus.html" import="panel"/>
 <%!
 	import mylar
         from operator import itemgetter
@@ -88,6 +89,7 @@
                             <a href="config_dump"><label><strong>Mylar Config File :</strong>${config['config_file']}</label></a></br>
                        </div>
                   </fieldset>
+                  ${panel(compact=True)}
                   <fieldset class="fieldset_header">
                        <legend>DONATIONS</legend>
                          <a name="donate"></a>

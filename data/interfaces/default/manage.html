@@ -1,6 +1,8 @@
 <%inherit file="base.html" />
+<%namespace file="importstatus.html" import="panel"/>
 <%!
 	import mylar
+	from mylar import importstatus
 	from mylar.helpers import checked
 %>
 <%def name="headerIncludes()">
@@ -61,12 +63,10 @@
                                      <label>Files that were parsed:&nbsp</label>${mylar.IMPORT_PARSED_COUNT}</br>
                                      <label>Files that couldn't be parsed:&nbsp</label>${mylar.IMPORT_FAILURE_COUNT}</br>
 
-                                     %if mylar.IMPORTLOCK:
-                                         </br></br></br></br>
-                                         <div class="row checkbox">
-                                            <input type="checkbox" style="vertical-align: middle; margin: 3px; margin-top: -1px;" name="forcescan" id="forcescan" value="1"><label>Existing Import Running. Force this import?</label>
-                                         </div>
-                                     %endif                                                                       
+                                     %if mylar.IMPORTLOCK or importstatus.running():
+                                         </br>
+                                         <small>A scan or import is currently running - see <a href="#tabs-4" onclick="$('#tabs').tabs('select', 3);return false;">Activity / Jobs</a> to follow or stop it.</small>
+                                     %endif
                                 </div>
 				<form action="comicScan" method="GET" id="comicScan">
                                    <fieldset>
@@ -221,6 +221,7 @@
 
         <div id="tabs-4">
           <div id="curtime" style="float:right;"></div>
+          ${panel()}
            <table summary="Activity / Jobs" width="100%" cellpadding="6px" cellspacing="2px">
                       <legend><center><h1>Schedulers<h1><center></legend>
                       <br />
@@ -353,7 +354,7 @@
                                     return;
                                 }
                                 $('#importstatus').val(data);
-                                if (data == 'Import completed.') {
+                                if (data == 'Import completed.' || data == 'Scan cancelled.' || data == 'Failure' || data == null) {
                                     CheckEnabled = false;
                                     clearInterval(ImportTimer);
                                     return;

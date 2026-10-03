@@ -1,0 +1,33 @@
+#import_indicator a { white-space: nowrap; }
+#import_indicator .ii-spin {
+  display: inline-block; width: 9px; height: 9px; margin-right: 4px;
+  border: 2px solid rgba(128,128,128,0.4); border-top-color: #52A9EE; border-radius: 50%;
+  animation: ii-spin 1s linear infinite; vertical-align: middle;
+}
+#import_indicator.ii-wait .ii-spin { border-top-color: #EC9F3B; }
+@keyframes ii-spin { to { transform: rotate(360deg); } }
+
+.import-panel { clear: both; margin: 0 0 20px 0; padding: 8px 12px; border: 1px solid rgba(128,128,128,0.35); border-radius: 4px; }
+.import-panel legend { font-weight: bold; padding: 0 6px; }
+.import-panel .ip-head { overflow: hidden; margin-bottom: 6px; }
+.import-panel .ip-phase { font-weight: bold; padding: 2px 8px; border-radius: 3px; background: rgba(128,128,128,0.2); }
+.import-panel .ip-phase.ip-active { background: #52A9EE; color: #fff; }
+.import-panel .ip-phase.ip-waiting { background: #EC9F3B; color: #fff; }
+.import-panel .ip-phase.ip-error { background: #EC7564; color: #fff; }
+.import-panel .ip-message { margin-left: 8px; }
+.import-panel .ip-buttons { float: right; }
+.import-panel .ip-buttons button, .import-panel .ip-buttons a { margin-left: 6px; }
+.import-panel .ip-bar { height: 8px; background: rgba(128,128,128,0.2); border-radius: 4px; overflow: hidden; margin: 4px 0 8px 0; }
+.import-panel .ip-fill { height: 100%; width: 0; background: #7AEE52; transition: width 0.5s; }
+.import-panel table.ip-stats { width: 100%; border-collapse: collapse; font-size: 12px; }
+.import-panel table.ip-stats td { padding: 2px 6px; }
+.import-panel table.ip-stats td:nth-child(odd) { opacity: 0.7; white-space: nowrap; }
+.import-panel .ip-ratelimit { margin-top: 6px; padding: 4px 8px; border-left: 3px solid #EC9F3B; }
+.import-panel .ip-pending { margin-top: 6px; padding: 4px 8px; border-left: 3px solid #52A9EE; }
+.import-panel .ip-logcontrols { margin-top: 8px; font-size: 11px; }
+.import-panel .ip-logcontrols label { margin-right: 12px; }
+.import-panel .ip-log {
+  max-height: 260px; overflow: auto; margin: 4px 0 0 0; padding: 6px; font-size: 11px; line-height: 1.35;
+  white-space: pre-wrap; word-break: break-all; background: rgba(0,0,0,0.06); border: 1px solid rgba(128,128,128,0.25);
+}
+.import-panel-compact table.ip-stats { font-size: 11px; }

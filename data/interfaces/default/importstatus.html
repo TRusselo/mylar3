@@ -1,0 +1,32 @@
+<%def name="panel(compact=False)">
+<fieldset id="import_panel" class="import-panel${' import-panel-compact' if compact else ''}">
+    <legend>Library Scan / Import</legend>
+    <div class="ip-head">
+        <span id="ip_phase" class="ip-phase">Idle</span>
+        <span id="ip_message" class="ip-message"></span>
+        <span class="ip-buttons">
+            <button type="button" id="ip_stop" style="display:none">Stop</button>
+            <button type="button" id="ip_resume" style="display:none">Resume import</button>
+            <a href="importResults" id="ip_results">Import Results</a>
+        </span>
+    </div>
+    <div class="ip-bar"><div id="ip_fill" class="ip-fill"></div></div>
+    <table class="ip-stats">
+        <tr><td>Started</td><td id="ip_started">-</td><td>Elapsed</td><td id="ip_elapsed">-</td><td>ETA</td><td id="ip_eta">-</td></tr>
+        <tr><td>Files found</td><td id="ip_files_found">-</td><td>Parsed</td><td id="ip_files_parsed">-</td><td>Unparseable</td><td id="ip_parse_failures">-</td></tr>
+        <tr><td>Metadata read</td><td id="ip_files_analyzed">-</td><td>IssueIDs resolved</td><td id="ip_issueids">-</td><td>CV rate-limit waits</td><td id="ip_rl_waits">-</td></tr>
+        <tr><td>Series imported</td><td id="ip_series">-</td><td>Added / Manual / No results / Failed</td><td colspan="3" id="ip_series_breakdown">-</td></tr>
+        <tr><td>Current series</td><td colspan="5" id="ip_current">-</td></tr>
+    </table>
+    <div id="ip_ratelimit" class="ip-ratelimit" style="display:none"></div>
+    <div id="ip_pending" class="ip-pending" style="display:none"></div>
+    %if not compact:
+    <div class="ip-logcontrols">
+        <label><input type="checkbox" id="ip_log_filter" checked="checked" /> only scan / import / ComicVine lines</label>
+        <label>lines <select id="ip_log_lines"><option>50</option><option selected="selected">200</option><option>500</option></select></label>
+        <label><input type="checkbox" id="ip_log_follow" checked="checked" /> follow</label>
+    </div>
+    <pre id="ip_log" class="ip-log"></pre>
+    %endif
+</fieldset>
+</%def>
