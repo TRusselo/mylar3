@@ -5,7 +5,7 @@ import os
 import time
 
 import mylar
-from .. import logger
+from .. import logger, helpers
 from mylar import db
 from mylar.downloaders.jdownloader2 import JDownloader2
 
@@ -136,15 +136,7 @@ def jd2_queue_monitor(queue):
                                 stale = (datetime.datetime.now() - updated_dt) >= datetime.timedelta(minutes=3)
 
                         if stale:
-                            if myDB is not None:
-                                myDB.upsert(
-                                    'ddl_info',
-                                    {
-                                        'status': 'Failed',
-                                        'updated_date': datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),
-                                    },
-                                    {'id': record_id},
-                                )
+                            jd2_mark_failed(myDB, item, record_id, 'job %s never reached the JD2 download list (links offline or rejected)' % job_id)
                             continue
 
                         queue.put(item)
@@ -197,16 +189,9 @@ def jd2_queue_monitor(queue):
                             logger.info('[JD2-QUEUE] Post-processing disabled, please manually handle your files.')
                         continue
 
-                    if job_status in failed_states:
-                        myDB.upsert(
-                                'ddl_info',
-                                {
-                                    'status': 'Failed',
-                                    'updated_date': datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),
-                                },
-                                {'id': record_id},
-                            )
+                    if job_status in failed_states or jd2_status_is_dead(job_status):
                         logger.warn('[JD2-QUEUE] Download %s reported failure state (%s).', job_filename, job_status)
+                        jd2_mark_failed(myDB, item, record_id, 'JD2 status %s' % job_status)
                         continue
 
                     if job_status not in completed_states:
@@ -215,5 +200,52 @@ def jd2_queue_monitor(queue):
                         continue
             else:
                 logger.warn('[JD2-QUEUE] Missing JD2 client or job id for item: %s', item)
+                jd2_mark_failed(myDB, item, record_id, 'no JD2 job id to monitor')
         else:
             time.sleep(10)
+
+
+# JD2 package statuses that mean the download can never finish (lower-cased substrings)
+JD2_DEAD_STATUS = ('offline', 'file not found', 'not available', 'plugin defect', 'aborted')
+
+
+def jd2_status_is_dead(job_status):
+    if not job_status:
+        return False
+    return any(x in str(job_status).lower() for x in JD2_DEAD_STATUS)
+
+
+def jd2_mark_failed(myDB, item, record_id, reason):
+    # mark both the ddl_info row and the issue itself Failed, so the issue doesn't sit at Snatched forever
+    logger.info('[JD2-QUEUE] Giving up on %s: %s', item.get('series') or record_id, reason)
+    try:
+        myDB.upsert('ddl_info', {'status': 'Failed',
+                                 'updated_date': datetime.datetime.now().strftime('%Y-%m-%d %H:%M')},
+                    {'id': record_id})
+    except Exception as err:
+        logger.warn('[JD2-QUEUE] Unable to mark ddl_info %s as Failed: %s', record_id, err)
+
+    issueid = item.get('issueid') or item.get('IssueID')
+    comicid = item.get('comicid') or item.get('ComicID')
+    pack = bool(item.get('pack'))
+    try:
+        pack = pack or item['comicinfo'][0]['pack'] is True
+    except Exception:
+        pass
+    if not issueid and record_id:
+        try:
+            row = myDB.selectone('SELECT issueid, comicid, pack FROM ddl_info WHERE id=?', [record_id]).fetchone()
+        except Exception:
+            row = None
+        if row is not None:
+            issueid = row['issueid']
+            comicid = comicid or row['comicid']
+            pack = pack or bool(row['pack'])
+
+    if pack:
+        helpers.reverse_the_pack_snatch(record_id, comicid)
+    elif all([issueid, issueid != 'None', not item.get('oneoff')]):
+        try:
+            mylar.search.FailedMark(issueid, comicid, record_id, item.get('series') or str(record_id), item.get('site') or 'DDL(GetComics)')
+        except Exception as err:
+            logger.warn('[JD2-QUEUE] Unable to mark issueid %s as Failed: %s', issueid, err)
