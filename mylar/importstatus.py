@@ -15,10 +15,17 @@
 # Live progress for library scans / mass imports (and ComicVine rate-limit waits),
 # polled by the web ui via webserve.import_progress.
 
+import json
+import os
 import threading
 import time
 
+import mylar
+from mylar import logger
+
 _lock = threading.RLock()
+# held while checking/claiming the scan or import slot so two can't start at once
+START_LOCK = threading.Lock()
 
 PHASES = {'idle': 'Idle',
           'scanning': 'Scanning files',
@@ -72,6 +79,8 @@ def start(mode, message=None):
 
 def phase(name, message=None):
     with _lock:
+        if _state['mode'] is None:
+            return
         _state['phase'] = name
         _state['phase_started'] = time.time()
         if message is not None:
@@ -176,3 +185,61 @@ def snapshot():
         if done > 0 and total > done and spent > 0:
             s['eta'] = int(spent / done * (total - done))
     return s
+
+
+# A marker in the data dir records that an import is in progress, so that an
+# import interrupted by a restart (eg. a nightly container backup) is resumed
+# on the next start instead of silently stopping.
+def _resume_file():
+    return os.path.join(mylar.DATA_DIR, 'import_resume.json')
+
+
+def save_resume(data):
+    data = dict(data, started=time.time())
+    try:
+        with open(_resume_file(), 'w') as f:
+            json.dump(data, f)
+    except Exception as e:
+        logger.warn('[IMPORT] Unable to write the import resume marker: %s' % e)
+
+
+def load_resume():
+    try:
+        with open(_resume_file()) as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return None
+    except Exception as e:
+        logger.warn('[IMPORT] Unable to read the import resume marker: %s' % e)
+        return None
+
+
+def clear_resume():
+    try:
+        os.remove(_resume_file())
+    except FileNotFoundError:
+        pass
+    except Exception as e:
+        logger.warn('[IMPORT] Unable to remove the import resume marker: %s' % e)
+
+
+def resume_on_startup(delay=120):
+    if load_resume() is None:
+        return
+    logger.info('[IMPORT] An import was interrupted by the last shutdown/restart - it will automatically resume in %s seconds.' % delay)
+
+    def _resume():
+        end = time.time() + delay
+        while time.time() < end:
+            if mylar.SIGNAL:
+                return
+            time.sleep(1)
+        try:
+            from mylar.webserve import WebInterface
+            ok, message = WebInterface().resume_import(auto=True)
+            if not ok:
+                logger.info('[IMPORT] Not resuming the import: %s' % message)
+        except Exception as e:
+            logger.error('[IMPORT] Unable to resume the interrupted import: %s' % e)
+
+    threading.Thread(target=_resume, name='ImportResume', daemon=True).start()

@@ -692,6 +692,9 @@ def start():
                 logger.info(e)
                 SCHED.print_jobs()
 
+            from mylar import importstatus
+            importstatus.resume_on_startup()
+
         started = True
 
 def queue_schedule(queuetype, mode):
