@@ -162,14 +162,52 @@ def _moving():
     return (getattr(mylar.CONFIG, 'FILE_OPTS', None) or 'move') == 'move'
 
 
+PENDING = []
+
+
+def take_pending():
+    out = list(PENDING)
+    del PENDING[:]
+    return out
+
+
+def _hold(path):
+    from mylar import autoadd
+    if autoadd.enabled() and not autoadd.attempted(path):
+        PENDING.append(path)
+        return True
+    return False
+
+
+def _in_monitor(path):
+    mon = mylar.CONFIG.CHECK_FOLDER
+    return bool(mon) and os.path.normpath(path).startswith(os.path.normpath(mon) + os.sep)
+
+
 def cleanup(folders):
     if not folders or not _moving():
         return
+    from mylar import autoadd
     for folder in folders:
         if not os.path.isdir(folder):
             continue
+        if autoadd.enabled() and mylar.CONFIG.CHECK_FOLDER and not _in_monitor(folder):
+            target = os.path.join(mylar.CONFIG.CHECK_FOLDER, os.path.basename(folder))
+            try:
+                os.makedirs(target, exist_ok=True)
+                for r, _, ns in os.walk(folder):
+                    for n in ns:
+                        if n.lower().endswith(COMIC_EXT):
+                            shutil.move(os.path.join(r, n), os.path.join(target, n))
+                shutil.rmtree(folder)
+                note('moved the unclaimed issues of %s to the monitored folder for auto-add' % os.path.basename(folder))
+            except Exception as e:
+                logger.warn('[ARCHIVE] Unable to move %s to the monitored folder: %s' % (folder, e))
+            continue
         left = [os.path.join(r, n) for r, _, ns in os.walk(folder) for n in ns]
         comics = [p for p in left if p.lower().endswith(COMIC_EXT)]
+        held = [p for p in comics if _hold(p)]
+        comics = [p for p in comics if p not in held]
         try:
             for p in comics:
                 _dispose(p, os.path.basename(folder))
@@ -178,7 +216,10 @@ def cleanup(folders):
                 logger.info('[ARCHIVE] %s %s issues from %s that nothing on the watchlist wanted%s' % (
                     'Deleted' if _leftover_action() == 'delete' else 'Moved', len(comics), os.path.basename(folder),
                     '' if _leftover_action() == 'delete' else ' to %s' % review_dir()))
-            shutil.rmtree(folder)
+            if held:
+                note('holding %s issues from %s for auto-add' % (len(held), os.path.basename(folder)))
+            else:
+                shutil.rmtree(folder)
         except Exception as e:
             logger.warn('[ARCHIVE] Unable to clear %s: %s' % (folder, e))
 
@@ -195,6 +236,8 @@ def sweep(folder, started):
                 if os.path.getmtime(path) >= cutoff:
                     continue
                 if name.lower().endswith(COMIC_EXT + ARCHIVE_EXT):
+                    if name.lower().endswith(COMIC_EXT) and (path in PENDING or _hold(path)):
+                        continue
                     _dispose(path, os.path.relpath(root, folder) if root != folder else '')
                     kept += 1
                 else:

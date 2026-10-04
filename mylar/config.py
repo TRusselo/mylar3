@@ -275,6 +275,7 @@ _CONFIG_DEFINITIONS = OrderedDict({
     'ARCHIVE_DELETE':  (bool, 'PostProcess', True),
     'ARCHIVE_LEFTOVERS':  (str, 'PostProcess', 'review'),
     'ARCHIVE_REVIEW_DIR':  (str, 'PostProcess', None),
+    'ARCHIVE_AUTO_ADD':  (bool, 'PostProcess', False),
     'CHECK_FOLDER': (str, 'PostProcess', None),
     'MANUAL_PP_FOLDER': (str, 'PostProcess', None),
     'FOLDER_CACHE_LOCATION': (str, 'PostProcess', None),

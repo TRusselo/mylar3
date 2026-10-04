@@ -1300,6 +1300,10 @@
                                     <div class="row checkbox left clearfix">
                                         <input type="checkbox" name="archive_delete" value="1" ${config['archive_delete']} /><label>Delete .zip/.rar downloads after extracting the comics in them</label>
                                     </div>
+                                    <div class="row checkbox left clearfix">
+                                        <input type="checkbox" name="archive_auto_add" value="1" ${config['archive_auto_add']} /><label>Add the series of comics nothing on the watchlist wants</label>
+                                        <small>Finds each series on ComicVine (using the pack's release week when there is one), adds it, and files the issue on the next folder monitor pass. Anything it can't identify follows the option below.</small>
+                                    </div>
                                     <div class="row">
                                         <label>Comics nothing on the watchlist wants (packs and the monitored folder)</label>
                                         <select name="archive_leftovers">

@@ -28,7 +28,7 @@ import pathlib
 from xml.dom.minidom import parseString
 import mylar
 
-from mylar import logger, db, helpers, updater, notifiers, filechecker, weeklypull, getimage, archives
+from mylar import logger, db, helpers, updater, notifiers, filechecker, weeklypull, getimage, archives, autoadd
 
 class PostProcessor(object):
     """
@@ -380,7 +380,10 @@ class PostProcessor(object):
             if source_name == 'Manual Run' and mylar.CONFIG.CHECK_FOLDER and source and \
                     os.path.normpath(source) == os.path.normpath(mylar.CONFIG.CHECK_FOLDER):
                 archives.sweep(source, started)
+            pending = archives.take_pending()
             archives.done()
+            if pending:
+                autoadd.queue(pending)
 
     def _process_main(self):
             module = self.module
