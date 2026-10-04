@@ -156,7 +156,7 @@ class _Metron(object):
             wait = 2.1 - (time.time() - self.last)
             if wait > 0:
                 time.sleep(wait)
-            r = self.s.get('https://metron.cloud/api/' + path, params=params, timeout=60)
+            r = self.s.get('https://metron.cloud/api/' + path, params=params, timeout=(10, 60))
             self.last = time.time()
             if r.status_code == 429:
                 time.sleep(int(r.headers.get('Retry-After') or 60))
@@ -192,7 +192,11 @@ def metron_test(token=None):
         return {'ok': False, 'message': 'No Metron API token is set.'}
     try:
         r = requests.get('https://metron.cloud/api/publisher/', params={'name': 'Marvel'},
-                         headers={'Authorization': 'Bearer %s' % token, 'User-Agent': 'Mylar3 ledger'}, timeout=30)
+                         headers={'Authorization': 'Bearer %s' % token, 'User-Agent': 'Mylar3 ledger'}, timeout=(8, 20))
+    except requests.exceptions.ConnectTimeout:
+        return {'ok': False, 'message': 'Metron is not responding right now (connection timed out). The site may be down - try again later.'}
+    except requests.exceptions.ConnectionError:
+        return {'ok': False, 'message': 'Could not connect to Metron. The site may be down - try again later.'}
     except Exception as e:
         return {'ok': False, 'message': 'Could not reach Metron: %s' % e}
     if r.status_code == 200:
