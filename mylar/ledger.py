@@ -3,6 +3,9 @@ import html as _html
 import json
 import re
 import threading
+import time
+
+import requests
 from collections import defaultdict
 
 import mylar
@@ -139,6 +142,42 @@ class _Library(object):
 def _ensure_table(myDB):
     myDB.action('CREATE TABLE IF NOT EXISTS ledger_collects (TradeIssueID TEXT UNIQUE, TradeComicID TEXT, Source TEXT, '
                 'Collects TEXT, IssueIDs TEXT, Unresolved TEXT, Updated TEXT)')
+    myDB.action('CREATE TABLE IF NOT EXISTS ledger_metron (TradeIssueID TEXT UNIQUE, MetronID TEXT, Updated TEXT)')
+
+
+class _Metron(object):
+    def __init__(self, token):
+        self.s = requests.Session()
+        self.s.headers.update({'Authorization': 'Bearer %s' % token, 'User-Agent': 'Mylar3 ledger'})
+        self.last = 0
+
+    def get(self, path, **params):
+        for attempt in range(5):
+            wait = 2.1 - (time.time() - self.last)
+            if wait > 0:
+                time.sleep(wait)
+            r = self.s.get('https://metron.cloud/api/' + path, params=params, timeout=60)
+            self.last = time.time()
+            if r.status_code == 429:
+                time.sleep(int(r.headers.get('Retry-After') or 60))
+                continue
+            r.raise_for_status()
+            return r.json()
+        raise Exception('Metron kept rate limiting requests')
+
+
+def _reprint_segments(reprints, trade_year):
+    segs = []
+    for x in reprints or []:
+        m = re.match(r'^(.*?)\s*\((\d{4})\)\s*#\s*(\S+)$', (x.get('issue') or '').strip())
+        if not m:
+            continue
+        name, year, num = m.group(1).strip(), m.group(2), m.group(3)
+        name = re.sub(r'\s+(TPB|HC|GN|Omnibus)$', '', name, flags=re.I)
+        if trade_year and year.isdigit() and int(year) > int(trade_year):
+            continue
+        segs.append((name, year, [num]))
+    return segs
 
 
 def start_build(force=False):
@@ -183,6 +222,9 @@ def _build(force):
                                                 'IssueIDs': json.dumps(found), 'Unresolved': json.dumps(missing), 'Updated': now},
                             {'TradeIssueID': t['IssueID']})
             _status['done'] = min(len(todo), k + 100)
+        token = getattr(mylar.CONFIG, 'METRON_API_TOKEN', None)
+        if token and token != 'None':
+            _metron_pass(myDB, lib, token, force)
         _status.update(phase='Finished')
         logger.info('[LEDGER] Collected-edition contents read for %s trade issues.' % len(todo))
     except Exception as e:
@@ -190,6 +232,38 @@ def _build(force):
         _status.update(error=str(e), phase='Failed')
     finally:
         _status.update(running=False, finished=datetime.datetime.now().strftime('%Y-%m-%d %H:%M'))
+
+
+def _metron_pass(myDB, lib, token, force):
+    checked = set() if force else {r['TradeIssueID'] for r in myDB.select('SELECT TradeIssueID FROM ledger_metron')}
+    rows = myDB.select("SELECT l.TradeIssueID, l.TradeComicID, l.IssueIDs, i.Issue_Number, c.ComicName, c.ComicYear, i.ReleaseDate "
+                       "FROM ledger_collects l JOIN issues i ON i.IssueID=l.TradeIssueID JOIN comics c ON c.ComicID=l.TradeComicID")
+    todo = [r for r in rows if r['IssueIDs'] in (None, '[]') and r['TradeIssueID'] not in checked]
+    _status.update(phase='Reading Metron reprint lists', done=0, total=len(todo))
+    api = _Metron(token)
+    for n, t in enumerate(todo, 1):
+        mid = None
+        res = api.get('issue/', cv_id=t['TradeIssueID']).get('results') or []
+        if not res:
+            res = api.get('issue/', series_name=t['ComicName'], number=t['Issue_Number']).get('results') or []
+            res = [x for x in res if str(t['ComicYear']) in (x.get('issue') or '')] or res[:1]
+        if res:
+            mid = res[0]['id']
+            detail = api.get('issue/%s/' % mid)
+            year = (t['ReleaseDate'] or '')[:4] or t['ComicYear']
+            segs = _reprint_segments(detail.get('reprints'), year)
+            if segs:
+                before = t['ReleaseDate'] or None
+                found, missing = lib.resolve(segs, t['ComicName'], before, t['TradeComicID'])
+                if found:
+                    names = sorted({'%s #%s' % (sg[0], sg[2][0]) for sg in segs})
+                    myDB.upsert('ledger_collects', {'Source': 'metron', 'Collects': ('Metron: ' + ', '.join(names))[:400],
+                                                    'IssueIDs': json.dumps(found), 'Unresolved': json.dumps(missing),
+                                                    'Updated': datetime.datetime.now().strftime('%Y-%m-%d %H:%M')},
+                                {'TradeIssueID': t['TradeIssueID']})
+        myDB.upsert('ledger_metron', {'MetronID': str(mid) if mid else None, 'Updated': datetime.datetime.now().strftime('%Y-%m-%d %H:%M')},
+                    {'TradeIssueID': t['TradeIssueID']})
+        _status['done'] = n
 
 
 def missing_data(cutoff=None):
@@ -269,5 +343,7 @@ def status_summary(myDB=None):
     _ensure_table(myDB)
     row = myDB.selectone('SELECT count(*), max(Updated) FROM ledger_collects').fetchone()
     s = status()
-    s.update(stored=row[0], updated=row[1])
+    tok = getattr(mylar.CONFIG, 'METRON_API_TOKEN', None)
+    s.update(stored=row[0], updated=row[1], metron=bool(tok and tok != 'None'),
+             metron_found=myDB.selectone("SELECT count(*) FROM ledger_collects WHERE Source='metron'").fetchone()[0])
     return s

@@ -41,6 +41,7 @@ _CONFIG_DEFINITIONS = OrderedDict({
     'REFRESH_CACHE': (int, 'General', 7),
     'ANNUALS_ON': (bool, 'General', False),
     'LEDGER_CUTOFF': (str, 'General', ''),
+    'METRON_API_TOKEN': (str, 'Metron', None),
     'SYNO_FIX': (bool, 'General', False),
     'LAUNCH_BROWSER' : (bool, 'General', False),
     'WANTED_TAB_OFF': (bool, 'General', False),

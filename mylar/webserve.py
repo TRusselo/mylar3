@@ -4699,6 +4699,14 @@ class WebInterface(object):
         return json.dumps(ledger.status_summary())
     ledger_status.exposed = True
 
+    def ledger_metron(self, token='', **kwargs):
+        cherrypy.response.headers['Content-Type'] = 'application/json'
+        token = token.strip()
+        mylar.CONFIG.METRON_API_TOKEN = token or None
+        mylar.CONFIG.writeconfig(values={'metron_api_token': token or None})
+        return json.dumps({'ok': True, 'metron': bool(token)})
+    ledger_metron.exposed = True
+
     def ledger_cutoff(self, cutoff='', **kwargs):
         cherrypy.response.headers['Content-Type'] = 'application/json'
         cutoff = cutoff.strip()

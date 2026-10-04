@@ -54,6 +54,7 @@ class carePackage(object):
                             ('TELEGRAM', 'telegram_token'),
                             ('GOTIFY', 'gotify_token'),
                             ('CV', 'comicvine_api'),
+                            ('Metron', 'metron_api_token'),
                             ('Seedbox', 'seedbox_user'),
                             ('Seedbox', 'seedbox_pass'),
                             ('Seedbox', 'seedbox_port'),

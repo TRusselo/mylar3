@@ -59,3 +59,5 @@
 @media (max-width: 560px) { .lg-count { margin-left: 0; width: 100%; } }
 .lg [hidden] { display: none !important; }
 .lg-mono { white-space: nowrap; }
+.lg-metron { display: flex; gap: 6px; align-items: center; }
+.lg-metron input { padding: 6px 8px; width: 210px; }

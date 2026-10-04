@@ -243,7 +243,7 @@
     var t;
     if (s.running) t = (s.phase || 'Working') + ': ' + fmt(s.done) + ' of ' + fmt(s.total) + ' editions';
     else if (s.error) t = 'Last read failed: ' + s.error;
-    else if (s.stored) t = fmt(s.stored) + ' editions read, last on ' + s.updated + '.';
+    else if (s.stored) t = fmt(s.stored) + ' editions read, last on ' + s.updated + '.' + (s.metron ? ' Metron is connected (' + fmt(s.metron_found || 0) + ' explained by Metron).' : ' Add a Metron token to check editions ComicVine can\'t explain.');
     else t = 'Trade contents haven\'t been read yet.';
     $id('lg-build-text').textContent = t;
     $('#lg-build-btn, #lg-rebuild-btn').prop('disabled', !!s.running);
@@ -255,6 +255,10 @@
       });
     }, 4000);
   }
+  $('#lg-metron-save').on('click', function () {
+    var v = $id('lg-metron-token').value.trim();
+    $.post('ledger_metron', { token: v }, function (r) { $id('lg-metron-token').value = ''; $.getJSON('ledger_status', function (x) { buildBar(x); }); }, 'json');
+  });
   $('#lg-build-btn').on('click', function () { $.getJSON('ledger_build', { force: 0 }, function (r) { buildBar(r.status); }); });
   $('#lg-rebuild-btn').on('click', function () { $.getJSON('ledger_build', { force: 1 }, function (r) { buildBar(r.status); }); });
 
