@@ -167,7 +167,7 @@ def ddl_process(myDB, item, link_type_failure):
         else:
             logger.info('[Status: %s] Failed to download item from %s : %s ' % (ddzstat['success'], item['site'], ddzstat))
             myDB.action('DELETE FROM ddl_info where id=?', [item['id']])
-            mylar.search.FailedMark(item['issueid'], item['comicid'], item['id'], ddzstat['filename'], item['site'])
+            mylar.search.FailedMark(item['issueid'], item['comicid'], item['id'], ddzstat['filename'], item['site'], retry=True)
 
 
 def ddl_give_up(myDB, item, ctrlval, link_type_failure):
@@ -182,7 +182,7 @@ def ddl_give_up(myDB, item, ctrlval, link_type_failure):
         is_pack = False
     if all([not is_pack, not item.get('oneoff'), item.get('issueid') is not None]):
         try:
-            mylar.search.FailedMark(item['issueid'], item['comicid'], item['id'], item['series'], item['site'])
+            mylar.search.FailedMark(item['issueid'], item['comicid'], item['id'], item['series'], item['site'], retry=True)
         except Exception as e:
             logger.warn('[REDO] Unable to mark issueid %s as Failed: %s' % (item['issueid'], e))
     if item['id'] in mylar.DDL_QUEUED:

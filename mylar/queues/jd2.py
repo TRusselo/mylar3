@@ -272,6 +272,6 @@ def jd2_mark_failed(myDB, item, record_id, reason):
         helpers.reverse_the_pack_snatch(record_id, comicid)
     elif all([issueid, issueid != 'None', not item.get('oneoff')]):
         try:
-            mylar.search.FailedMark(issueid, comicid, record_id, item.get('series') or str(record_id), item.get('site') or 'DDL(GetComics)')
+            mylar.search.FailedMark(issueid, comicid, record_id, item.get('series') or str(record_id), item.get('site') or 'DDL(GetComics)', retry=True)
         except Exception as err:
             logger.warn('[JD2-QUEUE] Unable to mark issueid %s as Failed: %s', issueid, err)

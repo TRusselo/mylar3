@@ -3804,7 +3804,7 @@ def notify_snatch(sent_to, comicname, comyear, IssueNumber, nzbprov, pack):
     return
 
 
-def FailedMark(IssueID, ComicID, id, nzbname, prov, oneoffinfo=None):
+def FailedMark(IssueID, ComicID, id, nzbname, prov, oneoffinfo=None, retry=False):
     # Used to pass a failed attempt at sending a download to a client, to the failed
     # handler, and then back again to continue searching.
 
@@ -3819,6 +3819,18 @@ def FailedMark(IssueID, ComicID, id, nzbname, prov, oneoffinfo=None):
         oneoffinfo=oneoffinfo,
     )
     FailProcess.markFailed()
+
+    if retry and IssueID and mylar.CONFIG.FAILED_DOWNLOAD_HANDLING and mylar.CONFIG.FAILED_AUTO:
+        myDB = db.DBConnection()
+        iss = myDB.selectone('SELECT ComicName, Issue_Number FROM issues WHERE IssueID=?', [IssueID]).fetchone()
+        mode = 'want'
+        if iss is None:
+            iss = myDB.selectone('SELECT ComicName, Issue_Number FROM annuals WHERE IssueID=? AND NOT Deleted', [IssueID]).fetchone()
+            mode = 'want_ann'
+        if iss is not None:
+            logger.info('[FAILED-DOWNLOAD] Searching again for %s #%s, skipping the result that failed.' % (iss['ComicName'], iss['Issue_Number']))
+            mylar.webserve.WebInterface().queueit(mode=mode, ComicName=iss['ComicName'], ComicIssue=iss['Issue_Number'],
+                                                  ComicID=ComicID, IssueID=IssueID, manualsearch=True)
 
     if prov == '32P' or prov == 'Public Torrents':
         return "torrent-fail"
