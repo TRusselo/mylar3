@@ -238,10 +238,13 @@ class GC(object):
                     self.search_format.insert(0, self.query['comicname'])
                     logger.debug('setting no issue number query to be first due to no issue number')
 
+            pack_query = '%s %s' % (re.sub(r'\s+', ' ', re.sub(r'[/|:]', ' ', self.query['comicname'])), self.query['year'])
             if mylar.CONFIG.PACK_PRIORITY:
                 #t_sf = self.search_format.pop(len(self.search_format)-1) #pop the last search query ('%s %s')
                 #add it in 1st so that packs will get searched for (hopefully first)
-                self.search_format.insert(0, '%s %s' % (self.query['comicname'], self.query['year']))
+                self.search_format.insert(0, pack_query)
+            elif self.query.get('year') and self.query.get('issue') not in (None, 'None'):
+                self.search_format.append(pack_query)
 
             for sf in self.search_format:
                 verified_matches = []
@@ -1479,6 +1482,8 @@ class GC(object):
     def check_for_pack(self, title, issue_in_pack=None):
 
         og_title = title
+        title = re.sub(r'\s*[–—]\s*', ' - ', title)
+        title = re.sub(r'#\s*(\d+)\s*-\s*#?\s*(\d+)', r'#\1 - \2', title)
 
         volume_label = None
         annuals = False

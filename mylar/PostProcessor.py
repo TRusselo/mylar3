@@ -28,7 +28,7 @@ import pathlib
 from xml.dom.minidom import parseString
 import mylar
 
-from mylar import logger, db, helpers, updater, notifiers, filechecker, weeklypull, getimage
+from mylar import logger, db, helpers, updater, notifiers, filechecker, weeklypull, getimage, archives
 
 class PostProcessor(object):
     """
@@ -420,6 +420,15 @@ class PostProcessor(object):
                         logger.fdebug('%s NZBGET Download folder option enabled. Directory set to : %s' % (module, self.nzb_folder))
             else:
                 logger.fdebug('%s Now performing post-processing of %s sent from DDL' % (module, self.nzb_name))
+
+            unpacked = archives.prepare(self.nzb_folder)
+            if unpacked:
+                kind, newpath = unpacked
+                self.nzb_folder = newpath
+                self.nzb_name = os.path.basename(newpath)
+                if kind == 'pack':
+                    logger.info('%s Post-processing the comics extracted from the archive in %s' % (module, newpath))
+                    self.issueid = None
 
             myDB = db.DBConnection()
 
