@@ -272,6 +272,7 @@ _CONFIG_DEFINITIONS = OrderedDict({
     'PRE_SHELL_LOCATION': (str, 'PostProcess', None),
     'PRE_SCRIPTS': (str, 'PostProcess', None),
     'ENABLE_CHECK_FOLDER':  (bool, 'PostProcess', False),
+    'ARCHIVE_DELETE':  (bool, 'PostProcess', True),
     'CHECK_FOLDER': (str, 'PostProcess', None),
     'MANUAL_PP_FOLDER': (str, 'PostProcess', None),
     'FOLDER_CACHE_LOCATION': (str, 'PostProcess', None),

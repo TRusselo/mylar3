@@ -11,6 +11,7 @@ COMIC_EXT = ('.cbz', '.cbr', '.cb7', '.pdf')
 IMAGE_EXT = ('.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp', '.avif', '.jxl')
 ARCHIVE_EXT = ('.zip', '.rar')
 SETTLE_SECONDS = 120
+MIN_PAGES = 3
 
 
 def _open(path):
@@ -43,8 +44,8 @@ def unpack(path):
         comics = [i for i in files if i.filename.lower().endswith(COMIC_EXT)]
         images = [i for i in files if i.filename.lower().endswith(IMAGE_EXT)]
         if not comics:
-            if not images:
-                logger.info('[ARCHIVE] %s holds no comics or pages - leaving it alone.' % os.path.basename(path))
+            if len(images) < MIN_PAGES:
+                logger.info('[ARCHIVE] %s holds no comics or comic pages - leaving it alone.' % os.path.basename(path))
                 return None
             arc_kind = 'comic'
         else:
@@ -68,7 +69,7 @@ def unpack(path):
         logger.info('[ARCHIVE] %s is a single comic - renamed to %s' % (os.path.basename(path), os.path.basename(target)))
         return 'comic', target
     logger.info('[ARCHIVE] Extracted %s comics from %s into %s' % (len(out), os.path.basename(path), dest))
-    if (getattr(mylar.CONFIG, 'FILE_OPTS', None) or 'move') == 'move':
+    if getattr(mylar.CONFIG, 'ARCHIVE_DELETE', True) is not False:
         try:
             os.remove(path)
         except Exception as e:
