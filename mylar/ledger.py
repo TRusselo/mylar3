@@ -1,4 +1,6 @@
 import datetime
+import os
+import shutil
 import html as _html
 import json
 import re
@@ -343,7 +345,7 @@ def _trades(myDB, status, comics):
 
 
 def _lookups(myDB):
-    status = {r['IssueID']: r for r in myDB.select('SELECT IssueID, ComicID, Issue_Number, Status FROM issues')}
+    status = {r['IssueID']: r for r in myDB.select('SELECT IssueID, ComicID, Issue_Number, Status, Location FROM issues')}
     comics = {r['ComicID']: r for r in myDB.select('SELECT ComicID, ComicName, ComicYear, ComicPublisher, Corrected_Type, Type, Have, Total FROM comics')}
     return status, comics
 
@@ -432,6 +434,7 @@ def collected_data():
         out.append({'iid': r['TradeIssueID'], 'cid': r['TradeComicID'], 'name': c['ComicName'], 'year': c['ComicYear'],
                     'pub': c['ComicPublisher'], 'type': c['Corrected_Type'] or c['Type'], 'num': t['Issue_Number'],
                     'tstatus': t['Status'], 'collects': r['Collects'] or '', 'found': len(x['found']), 'own': len(x['own']),
+                    'ondisk': sum(1 for f in x['own'] if status[f]['Location']),
                     'unresolved': sum(len(u['nums']) for u in x['unresolved']), 'lacking': lacking, 'coverage': x['coverage'],
                     'extras': sorted({_extra_name(u, x['found'], status, comics) for u in x['other']})})
     return {'trades': out, 'build': status_summary(myDB)}
@@ -445,3 +448,79 @@ def status_summary(myDB=None):
     s.update(stored=row[0], updated=row[1], metron=bool(metron_token()),
              metron_found=myDB.selectone("SELECT count(*) FROM ledger_collects WHERE Source='metron'").fetchone()[0])
     return s
+
+
+def _holding_dir():
+    return os.path.join(mylar.CONFIG.DESTINATION_DIR or '/comics', '_TRADE_DUPLICATES')
+
+
+def _duplicate_singles(myDB, trade_ids):
+    status, comics = _lookups(myDB)
+    locs = {r['IssueID']: r['Location'] for r in myDB.select('SELECT IssueID, Location FROM issues')}
+    clocs = {r['ComicID']: r['ComicLocation'] for r in myDB.select('SELECT ComicID, ComicLocation FROM comics')}
+    wanted = set(str(t) for t in trade_ids)
+    files, skipped = {}, []
+    for x in _trades(myDB, status, comics):
+        tid = x['row']['TradeIssueID']
+        if tid not in wanted:
+            continue
+        tpath = os.path.join(clocs.get(x['row']['TradeComicID']) or '', locs.get(tid) or '')
+        if x['trade']['Status'] not in OWNED or not locs.get(tid) or not os.path.isfile(tpath):
+            skipped.append('%s (%s) #%s: the trade file isn\'t on disk' % (x['comic']['ComicName'], x['comic']['ComicYear'], x['trade']['Issue_Number']))
+            continue
+        for f in x['own']:
+            cid = status[f]['ComicID']
+            if not locs.get(f) or not clocs.get(cid):
+                continue
+            src = os.path.join(clocs[cid], locs[f])
+            if os.path.isfile(src) and src != tpath:
+                files[f] = (cid, src)
+    return files, skipped
+
+
+def preview_remove(trade_ids):
+    myDB = db.DBConnection()
+    files, skipped = _duplicate_singles(myDB, trade_ids)
+    size = sum(os.path.getsize(src) for _, src in files.values())
+    return {'ok': True, 'count': len(files), 'bytes': size, 'dest': _holding_dir(), 'skipped': skipped}
+
+
+def remove_singles(trade_ids):
+    myDB = db.DBConnection()
+    files, skipped = _duplicate_singles(myDB, trade_ids)
+    if not files:
+        return {'ok': True, 'moved': 0, 'skipped': skipped}
+    root = _holding_dir()
+    stamp = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
+    os.makedirs(root, exist_ok=True)
+    undo = os.path.join(root, 'undo-%s.tsv' % stamp)
+    moved, failed, series = 0, [], set()
+    with open(undo, 'w') as log:
+        log.write('# move each file in column 2 back to column 1 to undo, then run Recheck Files on the series\n')
+        for iid, (cid, src) in files.items():
+            dst_dir = os.path.join(root, os.path.basename(os.path.dirname(src)))
+            dst = os.path.join(dst_dir, os.path.basename(src))
+            try:
+                os.makedirs(dst_dir, exist_ok=True)
+                if os.path.exists(dst):
+                    base, ext = os.path.splitext(dst)
+                    dst = '%s (%s)%s' % (base, stamp, ext)
+                shutil.move(src, dst)
+            except Exception as e:
+                failed.append('%s: %s' % (os.path.basename(src), e))
+                continue
+            log.write('%s\t%s\n' % (src, dst))
+            myDB.upsert('issues', {'Status': 'Archived', 'Location': None}, {'IssueID': iid})
+            moved += 1
+            series.add(cid)
+    logger.info('[LEDGER] Moved %s single issues duplicated by trades to %s (undo list: %s)' % (moved, root, undo))
+
+    def rescan():
+        from mylar import updater
+        for cid in series:
+            try:
+                updater.forceRescan(cid)
+            except Exception as e:
+                logger.warn('[LEDGER] Rescan of %s failed: %s' % (cid, e))
+    threading.Thread(target=rescan, name='LEDGER-RESCAN', daemon=True).start()
+    return {'ok': not failed, 'moved': moved, 'failed': failed, 'skipped': skipped, 'dest': root, 'undo': undo}

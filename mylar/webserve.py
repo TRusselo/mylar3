@@ -4721,6 +4721,16 @@ class WebInterface(object):
         return json.dumps({'ok': True, 'cutoff': cutoff})
     ledger_cutoff.exposed = True
 
+    def ledger_remove(self, ids='', confirm=0, **kwargs):
+        cherrypy.response.headers['Content-Type'] = 'application/json'
+        trade_ids = [i for i in ids.split(',') if i.strip()]
+        if not trade_ids:
+            return json.dumps({'ok': False, 'error': 'No trades selected.'})
+        if helpers.str_to_bool(confirm):
+            return json.dumps(ledger.remove_singles(trade_ids))
+        return json.dumps(ledger.preview_remove(trade_ids))
+    ledger_remove.exposed = True
+
     def history(self):
         return serve_template(templatename="history.html", title="History")
     history.exposed = True

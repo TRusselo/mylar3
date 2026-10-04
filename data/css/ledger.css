@@ -67,3 +67,10 @@
 .lg-trade-out .lg-ico { fill: none; }
 .lg-table tr.lg-complete td { background: color-mix(in srgb, var(--lg-done) 9%, var(--t-surface)); }
 .lg-table tr.lg-complete td:first-child { box-shadow: inset 4px 0 0 var(--lg-done); }
+.lg-grp { display: inline-flex; align-items: center; gap: 6px; padding-left: 10px; border-left: 1px solid var(--t-line); }
+.lg-grp small { color: var(--t-muted); font-size: 11px; max-width: 120px; line-height: 1.2; }
+.lg .lg-n { font-family: var(--t-mono); font-weight: 600; opacity: .75; }
+.lg-confirm { flex-basis: 100%; padding: 10px 12px; border: 1px solid var(--t-fail); border-radius: 4px; background: color-mix(in srgb, var(--t-fail) 8%, var(--t-surface)); }
+.lg-confirm code { font-family: var(--t-mono); font-size: 12px; }
+.lg-confirm .lg-btn { margin: 6px 6px 0 0; }
+.lg .lg-danger { color: var(--t-fail) !important; border-color: var(--t-fail) !important; }

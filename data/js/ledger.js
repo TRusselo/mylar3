@@ -223,7 +223,7 @@
     }).join('') : '<tr><td class="lg-empty" colspan="7">' + (C.trades.length ? 'No trades match these filters.' : 'Trade contents haven\'t been read yet. Use the button above.') + '</td></tr>');
     $id('lg-count').textContent = fmt(Math.min(st.limit, f.length)) + ' of ' + fmt(f.length) + ' trades';
     $id('lg-more').hidden = f.length <= st.limit;
-    $id('lg-note').textContent = 'Contents come from each trade\'s ComicVine description and, when a Metron token is set, Metron\'s reprint list. Trades neither source describes can\'t be checked. "Ignore issues it covers" marks the singles you don\'t have as Ignored, since you own them in this trade.';
+    $id('lg-note').textContent = 'Contents come from each trade\'s ComicVine description and, when a Metron token is set, Metron\'s reprint list. Trades neither source describes can\'t be checked. Select trades to want or skip the trade itself, want or ignore the singles it collects that you\'re missing, or move the singles it duplicates out of your library.';
   }
 
   $('#lg-table').on('click', '[data-open]', function () { var k = this.getAttribute('data-open'); st.open[k] = !st.open[k]; render(); });
@@ -233,39 +233,85 @@
       $('#lg-table tbody input[type=checkbox]').each(function () { ids(this).forEach(function (i) { if (on) st.sel[i] = 1; else delete st.sel[i]; }); });
       render(); return;
     }
+    st.confirm = null;
     var on2 = this.checked; ids(this).forEach(function (i) { if (on2) st.sel[i] = 1; else delete st.sel[i]; });
     $(this).closest('tr').toggleClass('lg-on', on2); selBar();
   });
   function ids(el) { var a = el.getAttribute('data-ids'); return a ? a.split(',') : [el.getAttribute('data-id')]; }
 
-  function selBar() {
-    var n = Object.keys(st.sel).length;
-    $id('lg-actions').hidden = n === 0;
-    $id('lg-selcount').textContent = fmt(n) + (st.tab === 'missing' ? ' issues selected' : ' trades selected');
-    var ig = $id('lg-ignore-covered');
-    if (st.tab === 'collected' && !ig) $('#lg-clear').before('<button class="lg-btn" id="lg-ignore-covered">Ignore issues it covers</button>');
-    if (st.tab !== 'collected' && ig) $(ig).remove();
+  function btn(id, label, n, why) {
+    return '<button class="lg-btn" data-do="' + id + '"' + (n ? '' : ' disabled title="' + esc(why) + '"') + '>' + label + (n ? ' <span class="lg-n">' + fmt(n) + '</span>' : '') + '</button>';
   }
-  $('#lg-clear').on('click', function () { st.sel = {}; render(); });
+  function selTrades() { return C ? C.trades.filter(function (t) { return st.sel[t.iid]; }) : []; }
+  function lackingIds(list) { var o = {}; list.forEach(function (t) { t.lacking.forEach(function (l) { o[l[0]] = 1; }); }); return Object.keys(o); }
+
+  function selBar() {
+    var n = Object.keys(st.sel).length, bar = $id('lg-actions');
+    bar.hidden = n === 0;
+    if (!n) { st.confirm = null; return; }
+    var html;
+    if (st.tab === 'missing') {
+      html = '<span id="lg-selcount">' + fmt(n) + ' missing issues selected</span>' +
+        btn('issues:Wanted', 'Mark Wanted', n) + btn('issues:Skipped', 'Mark Skipped', n) + btn('issues:Ignored', 'Mark Ignored', n);
+    } else {
+      var sel = selTrades(), notOwned = sel.filter(function (t) { return !isOwned(t); }), owned = sel.filter(isOwned);
+      var lack = lackingIds(sel), dupes = owned.reduce(function (a, t) { return a + (t.ondisk || 0); }, 0);
+      html = '<span id="lg-selcount">' + fmt(n) + ' trades selected</span>' +
+        '<span class="lg-grp"><small>The trade</small>' +
+        btn('trade:Wanted', 'Want it', notOwned.length, 'You already have every selected trade') +
+        btn('trade:Skipped', 'Skip it', notOwned.length, 'You already have every selected trade') + '</span>' +
+        '<span class="lg-grp"><small>Singles it collects that you\'re missing</small>' +
+        btn('lack:Wanted', 'Want them', lack.length, 'You have every single these trades collect') +
+        btn('lack:Ignored', 'Ignore them', lack.length, 'You have every single these trades collect') + '</span>' +
+        '<span class="lg-grp"><small>Singles it duplicates</small>' +
+        btn('remove', 'Remove them…', dupes, owned.length ? 'No single issue files of these trades are left in your library' : 'Only trades you have can replace singles') + '</span>';
+    }
+    html += '<button class="lg-btn lg-quiet" data-do="clear">Clear selection</button>';
+    if (st.confirm) html += '<div class="lg-confirm">' + st.confirm + '</div>';
+    bar.innerHTML = html;
+  }
 
   function mark(action, list, done) {
     if (!list.length) return;
     $('.lg-actions button').prop('disabled', true);
     $.ajax({ url: 'markissues', type: 'POST', traditional: true, data: { action: action, 'issueids[]': list } })
-      .always(function () { $('.lg-actions button').prop('disabled', false); })
       .done(function () { done(); })
-      .fail(function () { $id('lg-selcount').textContent = 'Mylar didn\'t accept the change. Check the log.'; });
+      .fail(function () { $('.lg-actions button').prop('disabled', false); $id('lg-selcount').textContent = 'Mylar didn\'t accept the change. Check the log.'; });
   }
   function reload() {
-    st.sel = {};
+    st.sel = {}; st.confirm = null;
     if (st.tab === 'missing') load('missing', function (d) { M = d; tiles(); render(); });
-    else load('collected', function (d) { C = d; tiles(); render(); });
+    else load('collected', function (d) { C = d; M = null; tiles(); render(); });
   }
-  $('#lg-actions').on('click', '[data-action]', function () { mark(this.getAttribute('data-action'), Object.keys(st.sel), reload); });
-  $('#lg-actions').on('click', '#lg-ignore-covered', function () {
-    var list = [];
-    C.trades.forEach(function (t) { if (st.sel[t.iid]) t.lacking.forEach(function (l) { if (list.indexOf(l[0]) < 0) list.push(l[0]); }); });
-    mark('Ignored', list, function () { M = null; reload(); });
+  function size(b) { return b > 1e9 ? (b / 1e9).toFixed(1) + ' GB' : Math.round(b / 1e6) + ' MB'; }
+  $('#lg-actions').on('click', '[data-do]', function () {
+    var d = this.getAttribute('data-do'), p = d.split(':');
+    if (d === 'clear') { st.sel = {}; st.confirm = null; render(); return; }
+    if (p[0] === 'issues') return mark(p[1], Object.keys(st.sel), reload);
+    if (p[0] === 'trade') return mark(p[1], selTrades().filter(function (t) { return !isOwned(t); }).map(function (t) { return t.iid; }), reload);
+    if (p[0] === 'lack') return mark(p[1], lackingIds(selTrades()), reload);
+    if (d === 'cancel') { st.confirm = null; selBar(); return; }
+    var ids = selTrades().filter(isOwned).map(function (t) { return t.iid; }).join(',');
+    if (d === 'remove') {
+      $('.lg-actions button').prop('disabled', true);
+      $.post('ledger_remove', { ids: ids, confirm: 0 }, function (r) {
+        st.confirm = r.count
+          ? 'Move <b>' + fmt(r.count) + ' single issue files</b> (' + size(r.bytes) + ') to <code>' + esc(r.dest) + '</code>? They stay counted as owned (Archived), and an undo list is saved in that folder. ' +
+            (r.skipped.length ? '<br><small>Skipped: ' + esc(r.skipped.join('; ')) + '</small> ' : '') +
+            '<button class="lg-btn lg-danger" data-do="move">Move ' + fmt(r.count) + ' files</button><button class="lg-btn lg-quiet" data-do="cancel">Cancel</button>'
+          : 'No single issue files to move.' + (r.skipped.length ? ' <small>' + esc(r.skipped.join('; ')) + '</small>' : '') + ' <button class="lg-btn lg-quiet" data-do="cancel">OK</button>';
+        selBar();
+      }, 'json');
+      return;
+    }
+    if (d === 'move') {
+      $('.lg-actions button').prop('disabled', true);
+      $.post('ledger_remove', { ids: ids, confirm: 1 }, function (r) {
+        reload();
+        var msg = 'Moved ' + fmt(r.moved) + ' files to ' + r.dest + '. Undo list: ' + r.undo + (r.failed && r.failed.length ? '. Failed: ' + r.failed.join('; ') : '');
+        $id('lg-note').textContent = r.moved ? msg : 'Nothing was moved.';
+      }, 'json');
+    }
   });
 
   var poll = null;
