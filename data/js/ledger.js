@@ -245,6 +245,7 @@
     else if (s.error) t = 'Last read failed: ' + s.error;
     else if (s.stored) t = fmt(s.stored) + ' editions read, last on ' + s.updated + '. Sources: ComicVine' + (s.metron ? ' and Metron (' + fmt(s.metron_found || 0) + ' explained by Metron).' : '. Add a Metron API token in Settings to check more editions.');
     else t = 'Trade contents haven\'t been read yet.';
+    if (!s.running && s.note) t += ' ' + s.note;
     $id('lg-build-text').textContent = t;
     $('#lg-build-btn, #lg-rebuild-btn').prop('disabled', !!s.running);
     $id('lg-build-btn').textContent = s.stored ? 'Read new editions' : 'Read trade contents';

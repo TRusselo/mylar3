@@ -22,7 +22,7 @@ _SEG = re.compile(
     r'\s*(?:\((\d{4})\))?\s*(?:issues?\s*)?#\s*(%s(?:\s*(?:[-–—,&]|and|to)\s*#?\s*%s)*)' % (_NUM, _NUM))
 
 _lock = threading.Lock()
-_status = {'running': False, 'done': 0, 'total': 0, 'phase': None, 'started': None, 'finished': None, 'error': None}
+_status = {'running': False, 'done': 0, 'total': 0, 'phase': None, 'started': None, 'finished': None, 'error': None, 'note': None}
 
 
 def status():
@@ -212,7 +212,7 @@ def start_build(force=False):
     with _lock:
         if _status['running']:
             return False
-        _status.update(running=True, done=0, total=0, phase='Preparing', error=None,
+        _status.update(running=True, done=0, total=0, phase='Preparing', error=None, note=None,
                        started=datetime.datetime.now().strftime('%Y-%m-%d %H:%M'), finished=None)
     threading.Thread(target=_build, args=(force,), name='LedgerBuild').start()
     return True
@@ -251,9 +251,14 @@ def _build(force):
                             {'TradeIssueID': t['IssueID']})
             _status['done'] = min(len(todo), k + 100)
         token = metron_token()
+        metron_note = None
         if token:
-            _metron_pass(myDB, lib, token, force)
-        _status.update(phase='Finished')
+            try:
+                _metron_pass(myDB, lib, token, force)
+            except Exception as e:
+                logger.warn('[LEDGER] Metron pass stopped: %s' % e)
+                metron_note = 'ComicVine contents saved. Metron could not be read (%s) - run it again later.' % e.__class__.__name__
+        _status.update(phase='Finished', note=metron_note)
         logger.info('[LEDGER] Collected-edition contents read for %s trade issues.' % len(todo))
     except Exception as e:
         logger.warn('[LEDGER] Building collected-edition data failed: %s' % e)
