@@ -146,20 +146,27 @@ def _ensure_table(myDB):
 
 
 class _Metron(object):
+    SPACING = 4.0
+    BUDGET = 300
+
     def __init__(self, token):
         self.s = requests.Session()
         self.s.headers.update({'Authorization': 'Bearer %s' % token, 'User-Agent': 'Mylar3 ledger'})
         self.last = 0
+        self.used = 0
 
     def get(self, path, **params):
-        for attempt in range(5):
-            wait = 2.1 - (time.time() - self.last)
+        for attempt in range(3):
+            if self.used >= self.BUDGET:
+                raise Exception('Stopped after %s Metron requests this run - run it again later for the rest' % self.BUDGET)
+            wait = self.SPACING - (time.time() - self.last)
             if wait > 0:
                 time.sleep(wait)
             r = self.s.get('https://metron.cloud/api/' + path, params=params, timeout=(10, 60))
             self.last = time.time()
+            self.used += 1
             if r.status_code == 429:
-                time.sleep(int(r.headers.get('Retry-After') or 60))
+                time.sleep(max(int(r.headers.get('Retry-After') or 120), 60))
                 continue
             r.raise_for_status()
             return r.json()
