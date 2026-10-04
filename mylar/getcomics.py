@@ -854,24 +854,12 @@ class GC(object):
                                 link_matched = True
 
                     elif not link_matched and site_lp == 'main':
-                        try:
-                            kk = tmp_links[site_position['SD-Digital:download now']]
-                            logger.info('[MAIN-SERVER] SD-Digital preference detected...attempting %s' % kk['series'])
-                            link_matched = True
-                        except Exception as e:
-                            try:
-                                kk = tmp_links[site_position['SD-Digital:mirror download']]
-                                logger.info('[MIRROR-SERVER] SD-Digital preference detected...attempting %s' % kk['series'])
+                        for main_key in ('SD-Digital:download now', 'SD-Digital:mirror download', 'normal:download now', 'normal:mirror download'):
+                            if main_key in site_position:
+                                kk = tmp_links[site_position[main_key]]
+                                logger.info('[MAIN-SERVER] %s preference detected...attempting %s' % (main_key, kk['series']))
                                 link_matched = True
-                            except KeyError:
-                                try:
-                                    kk = tmp_links[site_position['normal:download now']]
-                                    logger.info('[MAIN-SERVER] main preference detected...attempting %s' % kk['series'])
-                                    link_matched = True
-                                except KeyError:
-                                    kk = tmp_links[site_position['normal:mirror download']]
-                                    logger.info('[MIRROR-SERVER] main-mirror preference detected...attempting %s' % kk['series'])
-                                    link_matched = True
+                                break
 
                     if link_matched:
                         link = kk
@@ -906,20 +894,22 @@ class GC(object):
                                logger.info('[mediafire] Unable to attain proper link...')
                                link_matched = False
                    elif not link_matched and site_lp == 'main':
-                       if 'download now' in tmp_sites:
-                           link = tmp_links[site_position['normal:download now']]
-                       elif 'mirror download' in tmp_sites:
-                           link = tmp_links[site_position['normal:mirror download']]
-                       else:
-                           link = tmp_links[0]
-                           force_title = True
-                       if 'sh.st' in link:
+                       main_keys = [k for k in ('normal:download now', 'normal:mirror download') if k in site_position]
+                       if not main_keys:
+                           continue
+                       link = tmp_links[site_position[main_keys[0]]]
+                       if 'sh.st' in str(link.get('links', '')):
                            logger.fdebug('[Paywall-link detected] this is not a valid link')
                            link_matched = False
                        else:
-                           if force_title:
-                               series = link['series']
+                           series = link['series']
                            link_matched = True
+
+            if not link_matched:
+                link = tmp_links[0]
+                series = link['series']
+                link_matched = True
+                logger.info('None of the preferred sources matched - using %s for %s' % (link['site'], series))
 
         elif other_links and self.jd2 is not None:
             link = other_links[0]
