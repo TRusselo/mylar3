@@ -372,6 +372,7 @@ class PostProcessor(object):
         self.extracted = []
         started = time.time()
         source, source_name = self.nzb_folder, self.nzb_name
+        archives.busy('Post-processing %s' % ('the monitored folder' if source_name == 'Manual Run' else source_name))
         try:
             return self._process_main()
         finally:
@@ -379,6 +380,7 @@ class PostProcessor(object):
             if source_name == 'Manual Run' and mylar.CONFIG.CHECK_FOLDER and source and \
                     os.path.normpath(source) == os.path.normpath(mylar.CONFIG.CHECK_FOLDER):
                 archives.sweep(source, started)
+            archives.done()
 
     def _process_main(self):
             module = self.module
@@ -466,6 +468,8 @@ class PostProcessor(object):
                                                "mode": 'stop'})
                         return self.queue.put(self.valreturn)
                     logger.info('I have located %s files that I should be able to post-process. Continuing...' % filelist['comiccount'])
+                    archives.busy('Post-processing %s files' % filelist['comiccount'])
+                    archives.note('checked %s files against the watchlist' % filelist['comiccount'])
                 else:
                     if self.comicid is None and self.issueid is not None and '_' not in str(self.issueid):
                         cid = myDB.selectone('SELECT ComicID FROM issues where IssueID=?', [str(self.issueid)]).fetchone()

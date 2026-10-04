@@ -222,6 +222,18 @@
         <div id="tabs-4">
           <div id="curtime" style="float:right;"></div>
           ${panel()}
+          <fieldset id="pp_panel" class="import-panel">
+              <legend>Folder Monitor / Post-Processing</legend>
+              <div class="ip-head">
+                  <span id="pp_state" class="ip-phase">Idle</span>
+                  <span id="pp_detail" class="ip-message"></span>
+              </div>
+              <table class="ip-stats">
+                  <tr><td>Folder monitor</td><td id="pp_monitor" colspan="3">-</td></tr>
+                  <tr><td>Last pass</td><td id="pp_last_at">-</td><td colspan="2" id="pp_last">-</td></tr>
+                  <tr><td>Unwanted issues go to</td><td colspan="3" id="pp_review">-</td></tr>
+              </table>
+          </fieldset>
            <table summary="Activity / Jobs" width="100%" cellpadding="6px" cellspacing="2px">
                       <legend><center><h1>Schedulers<h1><center></legend>
                       <br />
@@ -335,6 +347,21 @@
                 document.getElementById('curtime').innerHTML = h + ":" + m + ":" + s;
                 var t = setTimeout(startTime, 500);
         };
+        function ppAgo(t, now) { if (!t) return '-'; var m = Math.round((now - t) / 60); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : Math.round(m / 60) + ' h ago'; }
+        function ppRefresh() {
+            $.getJSON('pp_activity', function (d) {
+                $('#pp_state').text(d.state);
+                $('#pp_detail').text(d.state === 'Working' ? d.detail + ' (' + ppAgo(d.since, d.now).replace(' ago', '') + ')' : '');
+                var mon = d.monitor_enabled ? d.monitor_status + ' - checks ' + d.monitor_folder + ' every ' + d.interval + ' min' : 'Off (turn it on in Settings > Post-Processing)';
+                if (d.monitor_enabled && d.monitor_status === 'Paused') mon += ' - paused here, use Resume below';
+                $('#pp_monitor').text(mon);
+                $('#pp_last_at').text(ppAgo(d.last_at, d.now));
+                $('#pp_last').text(d.last || '-');
+                $('#pp_review').text(d.review_dir);
+            });
+        }
+        ppRefresh();
+        setInterval(ppRefresh, 5000);
         function checkTime(i) {
                 if (i < 10) {i = "0" + i}; // add zero in front of numbers if < 10
                 return i;

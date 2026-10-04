@@ -3136,10 +3136,9 @@ def job_management(write=False, job=None, last_run_completed=None, current_run=N
                 # db value isn't used in startup as config option controls status
                 if mylar.SCHED_MONITOR_LAST is None:
                     mylar.SCHED_MONITOR_LAST = ji['prev_run_timestamp']
-                if jstatus is None:
-                    if mylar.CONFIG.CHECK_FOLDER:
-                        jstatus = 'Waiting'
-                if any([jstatus == 'Waiting', jstatus == 'Running']) and mylar.CONFIG.CHECK_FOLDER is False:
+                if mylar.CONFIG.ENABLE_CHECK_FOLDER and mylar.CONFIG.CHECK_FOLDER:
+                    jstatus = 'Waiting'
+                else:
                     jstatus = 'Paused'
                 mylar.MONITOR_STATUS = jstatus
 

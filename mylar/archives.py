@@ -11,6 +11,25 @@ COMIC_EXT = ('.cbz', '.cbr', '.cb7', '.pdf')
 IMAGE_EXT = ('.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp', '.avif', '.jxl')
 ARCHIVE_EXT = ('.zip', '.rar')
 SETTLE_SECONDS = 120
+ACTIVITY = {'state': 'Idle', 'detail': '', 'since': None, 'last': '', 'last_at': None, 'notes': []}
+
+
+def busy(detail):
+    if ACTIVITY['state'] != 'Working':
+        ACTIVITY.update(state='Working', since=time.time(), notes=[])
+    ACTIVITY['detail'] = detail
+
+
+def note(text):
+    ACTIVITY['notes'].append(text)
+
+
+def done(fallback='Nothing to do.'):
+    ACTIVITY.update(state='Idle', detail='', last='; '.join(ACTIVITY['notes']) or fallback, last_at=time.time(), notes=[])
+
+
+def snapshot():
+    return {k: v for k, v in ACTIVITY.items() if k != 'notes'}
 MIN_PAGES = 3
 
 
@@ -51,6 +70,7 @@ def unpack(path):
         else:
             arc_kind = 'pack'
             dest = os.path.splitext(path)[0]
+            busy('Extracting %s' % os.path.basename(path))
             os.makedirs(dest, exist_ok=True)
             out = []
             for info in comics:
@@ -69,6 +89,7 @@ def unpack(path):
         logger.info('[ARCHIVE] %s is a single comic - renamed to %s' % (os.path.basename(path), os.path.basename(target)))
         return 'comic', target
     logger.info('[ARCHIVE] Extracted %s comics from %s into %s' % (len(out), os.path.basename(path), dest))
+    note('extracted %s issues from %s' % (len(out), os.path.basename(path)))
     if getattr(mylar.CONFIG, 'ARCHIVE_DELETE', True) is not False:
         try:
             os.remove(path)
@@ -153,6 +174,7 @@ def cleanup(folders):
             for p in comics:
                 _dispose(p, os.path.basename(folder))
             if comics:
+                note('%s %s unwanted issues from %s' % ('deleted' if _leftover_action() == 'delete' else 'moved to review', len(comics), os.path.basename(folder)))
                 logger.info('[ARCHIVE] %s %s issues from %s that nothing on the watchlist wanted%s' % (
                     'Deleted' if _leftover_action() == 'delete' else 'Moved', len(comics), os.path.basename(folder),
                     '' if _leftover_action() == 'delete' else ' to %s' % review_dir()))
@@ -187,5 +209,6 @@ def sweep(folder, started):
             except Exception:
                 pass
     if kept or junk:
+        note('cleared %s unfiled comics and %s other files from the monitored folder' % (kept, junk))
         logger.info('[FOLDER MONITOR] Cleared the monitored folder: %s unfiled comics %s, %s other files deleted.' % (
             kept, 'deleted' if _leftover_action() == 'delete' else 'moved to %s' % review_dir(), junk))

@@ -7851,8 +7851,32 @@ class WebInterface(object):
         # Write the config
         logger.info('Now saving config...')
         mylar.CONFIG.writeconfig()
+        self._sync_monitor()
 
     configUpdate.exposed = True
+
+    def _sync_monitor(self):
+        try:
+            on = all([mylar.CONFIG.ENABLE_CHECK_FOLDER, mylar.CONFIG.CHECK_FOLDER, int(mylar.CONFIG.DOWNLOAD_SCAN_INTERVAL or 0) > 0])
+            if on:
+                mylar.SCHED.resume_job('monitor')
+                if mylar.MONITOR_STATUS != 'Running':
+                    mylar.MONITOR_STATUS = 'Waiting'
+            else:
+                mylar.SCHED.pause_job('monitor')
+                mylar.MONITOR_STATUS = 'Paused'
+            helpers.job_management(write=True)
+        except Exception as e:
+            logger.warn('[FOLDER MONITOR] Unable to update the folder monitor job: %s' % e)
+
+    def pp_activity(self, **kwargs):
+        cherrypy.response.headers['Content-Type'] = 'application/json'
+        out = archives.snapshot()
+        out.update(monitor_status=mylar.MONITOR_STATUS, monitor_enabled=bool(mylar.CONFIG.ENABLE_CHECK_FOLDER),
+                   monitor_folder=mylar.CONFIG.CHECK_FOLDER or '', interval=mylar.CONFIG.DOWNLOAD_SCAN_INTERVAL,
+                   review_dir=archives.review_dir(), now=time.time())
+        return json.dumps(out)
+    pp_activity.exposed = True
 
     def SABtest(self, sabhost=None, sabusername=None, sabpassword=None, sabapikey=None):
         if sabhost is None:
