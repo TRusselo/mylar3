@@ -1,0 +1,59 @@
+html { font-size: 14px; }
+body { line-height: 1.5; }
+
+header {
+  position: sticky !important; top: 0; height: auto !important; opacity: 1 !important;
+  background: var(--t-surface) !important; border-bottom: 1px solid var(--t-line) !important; box-shadow: none !important;
+}
+header .wrapper { display: flex !important; align-items: center; gap: 20px; height: 56px; overflow: visible !important; }
+header #logo { float: none !important; margin: 0 !important; position: static !important; flex: none; }
+header #logo a { display: flex; align-items: center; }
+header #logo img { height: 34px !important; width: auto !important; margin: 0 !important; }
+div#searchbar { order: 2; float: none !important; position: static !important; margin: 0 0 0 auto !important; }
+div#searchbar form { display: flex; align-items: center; gap: 6px; margin: 0; }
+div#searchbar input[type=text] { width: 200px !important; height: 32px; padding: 0 10px !important; margin: 0 !important; }
+div#searchbar .mini-icon { display: none !important; }
+div#searchbar input[type=submit] { height: 32px; padding: 0 12px !important; margin: 0 !important; }
+#nav { order: 1; float: none !important; position: static !important; display: flex !important; align-items: center; gap: 2px; margin: 0 !important; padding: 0 !important; }
+#nav li { float: none !important; list-style: none; margin: 0 !important; }
+#nav li a { display: flex !important; align-items: center; gap: 6px; height: 56px; padding: 0 12px !important; font-size: 16px !important; border-bottom: 2px solid transparent; box-sizing: border-box; }
+#nav li a:hover { color: var(--t-fg) !important; }
+#nav li a.is-current { color: var(--t-fg) !important; border-bottom-color: var(--t-accent); }
+#nav li a.config { width: auto !important; background: none !important; text-indent: 0 !important; }
+#nav .nav-gear { flex: none; width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linejoin: round; }
+
+#main { padding-top: 20px !important; padding-bottom: 32px !important; }
+#subhead { float: none !important; margin: 0 !important; }
+#subhead_container { float: none !important; margin: 0 !important; padding: 0 !important; }
+.page-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin: 0 0 16px; }
+.page-head > h1, .page-head > .page-title { margin: 0 !important; }
+.page-head #subhead_menu, .page-actions { display: flex; flex-wrap: wrap; gap: 4px; float: none !important; margin: 0 !important; padding: 0 !important; }
+.page-head #subhead_menu a, #subhead #subhead_menu a {
+  background: none !important; border: 0 !important; color: var(--t-muted) !important; font-weight: 600 !important;
+  padding: 6px 10px !important; border-radius: 4px !important; font-size: 13px !important; margin: 0 !important; float: none !important;
+}
+.page-head #subhead_menu a:hover, #subhead #subhead_menu a:hover { background: var(--t-hover) !important; color: var(--t-fg) !important; }
+#subhead_menu a .ui-icon, #subhead_menu a img { display: none !important; }
+
+.ui-tabs { border: 0 !important; padding: 0 !important; background: none !important; }
+.ui-tabs .ui-tabs-nav { background: none !important; border: 0 !important; border-bottom: 1px solid var(--t-line) !important; border-radius: 0 !important; padding: 0 !important; margin: 0 0 16px !important; display: flex; flex-wrap: wrap; gap: 4px; }
+.ui-tabs .ui-tabs-nav li { background: none !important; border: 0 !important; margin: 0 !important; float: none !important; top: 0 !important; }
+.ui-tabs .ui-tabs-nav li a { padding: 10px 14px !important; border-bottom: 2px solid transparent; margin-bottom: -1px; float: none !important; }
+.ui-tabs .ui-tabs-nav li.ui-tabs-active a, .ui-tabs .ui-tabs-nav li.ui-state-active a { border-bottom-color: var(--t-accent); }
+.ui-tabs .ui-tabs-panel { padding: 0 !important; background: none !important; }
+
+fieldset { border: 1px solid var(--t-line) !important; border-radius: 6px; padding: 16px 18px !important; }
+legend { padding: 0 6px; }
+
+footer { margin-top: 40px !important; padding: 16px !important; font-size: 12px; opacity: .8; }
+#toTop { display: none !important; }
+
+@media (max-width: 900px) {
+  header .wrapper { flex-wrap: wrap; height: auto; padding-top: 8px; padding-bottom: 8px; }
+  #nav { order: 3; width: 100%; overflow-x: auto; }
+  #nav li a { height: 40px; font-size: 15px !important; }
+  div#searchbar input[type=text] { width: 140px !important; }
+}
+.lg-head .page-actions { margin-top: 8px !important; }
+.lg-head .page-actions a { padding: 4px 8px !important; }
+#main > h1.page-title { margin: 0 0 14px !important; }
