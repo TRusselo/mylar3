@@ -181,6 +181,7 @@ def jd2_queue_monitor(queue):
                                         'download_info': {'provider': 'JD2', 'id': record_id, 'job_id': job_id},
                                     })
                                     logger.info('[JD2-QUEUE] Submitted %s for post-processing (folder: %s).', job_filename, nzb_folder)
+                                    jd2_client.remove(job_id)
                                 except Exception as err:
                                     logger.warn('[JD2-QUEUE] Unable to enqueue %s for post-processing: %s', job_filename, err)
                             else:
@@ -190,8 +191,11 @@ def jd2_queue_monitor(queue):
                         continue
 
                     if job_status in failed_states or jd2_status_is_dead(job_status):
-                        logger.warn('[JD2-QUEUE] Download %s reported failure state (%s).', job_filename, job_status)
-                        jd2_mark_failed(myDB, item, record_id, 'JD2 status %s' % job_status)
+                        reason = (status_payload or {}).get('reason') or job_status
+                        logger.warn('[JD2-QUEUE] Download %s can not complete in JD2 (%s).', job_filename or record_id, reason)
+                        jd2_client.remove(job_id)
+                        if not jd2_fallback(myDB, item, record_id):
+                            jd2_mark_failed(myDB, item, record_id, 'JD2 status %s' % reason)
                         continue
 
                     if job_status not in completed_states:
@@ -205,8 +209,26 @@ def jd2_queue_monitor(queue):
             time.sleep(10)
 
 
-# JD2 package statuses that mean the download can never finish (lower-cased substrings)
-JD2_DEAD_STATUS = ('offline', 'file not found', 'not available', 'plugin defect', 'aborted')
+JD2_DEAD_STATUS = ('offline', 'file not found', 'not available', 'plugin defect', 'aborted', 'blocked by cloudflare')
+
+
+def jd2_fallback(myDB, item, record_id):
+    if item.get('jd2_fallback') or not item.get('mainlink') or not item.get('link_type') or not getattr(mylar.CONFIG, 'ENABLE_DDL', False):
+        return False
+    payload = dict(item)
+    for k in ('jd2_job_id', 'jd2_priority_links'):
+        payload.pop(k, None)
+    payload['jd2_fallback'] = True
+    payload.setdefault('resume', None)
+    try:
+        myDB.upsert('ddl_info', {'status': 'Queued', 'jd2_job_id': None,
+                                 'updated_date': datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}, {'id': record_id})
+        mylar.DDL_QUEUE.put(payload)
+    except Exception as err:
+        logger.warn('[JD2-QUEUE] Unable to hand %s to the built-in downloader: %s', record_id, err)
+        return False
+    logger.info('[JD2-QUEUE] Handing %s to the built-in downloader instead.', item.get('series') or record_id)
+    return True
 
 
 def jd2_status_is_dead(job_status):
