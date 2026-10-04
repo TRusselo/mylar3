@@ -1864,11 +1864,6 @@ def duplicate_filecheck(filename, ComicID=None, IssueID=None, StoryArcID=None, r
     #'dupe_file' - do not write new file as existing file is better quality
     #'dupe_src' - write new file, as existing file is a lesser quality (dupe)
 
-    from mylar import archives
-    if dupchk['Status'] in ('Downloaded', 'Archived') and archives.from_pack(filename):
-        logger.info('[DUPECHECK] %s came out of a pack and issue #%s is already %s - keeping the existing file.' % (os.path.basename(filename), dupchk['Issue_Number'], dupchk['Status']))
-        return {'action': 'dupe_file', 'to_dupe': filename}
-
     if dupchk['Status'] == 'Downloaded' or dupchk['Status'] == 'Archived':
         try:
             dupsize = dupchk['ComicSize']

@@ -11,7 +11,6 @@ COMIC_EXT = ('.cbz', '.cbr', '.cb7', '.pdf')
 IMAGE_EXT = ('.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp', '.avif', '.jxl')
 ARCHIVE_EXT = ('.zip', '.rar')
 SETTLE_SECONDS = 120
-PACK_MARKER = '.mylar-pack'
 
 
 def _open(path):
@@ -52,8 +51,6 @@ def unpack(path):
             arc_kind = 'pack'
             dest = os.path.splitext(path)[0]
             os.makedirs(dest, exist_ok=True)
-            with open(os.path.join(dest, PACK_MARKER), 'w') as f:
-                f.write(os.path.basename(path))
             out = []
             for info in comics:
                 target = os.path.join(dest, os.path.basename(info.filename))
@@ -109,7 +106,3 @@ def prepare(path):
     except Exception as e:
         logger.warn('[ARCHIVE] Unable to unpack %s: %s' % (path, e))
     return None
-
-
-def from_pack(path):
-    return bool(path) and os.path.isfile(os.path.join(os.path.dirname(path), PACK_MARKER))
