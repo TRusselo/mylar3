@@ -63,7 +63,13 @@ def parse_collects(text):
         last = None
         for m in _SEG.finditer(clause):
             name = (m.group(1) or '').strip(' ,&-')
-            name = re.sub(r'^(?:and|plus|&|the series|issues?)\s+', '', name, flags=re.I).strip()
+            name = re.sub(r'^\d+(?:[-–]\d+)?[.,]\s+', '', name)
+            name = re.sub(r'^\d+\s+(?:and|plus|&)\s+', '', name, flags=re.I)
+            name = re.sub(r'^(?:collect(?:s|ing|ed)?|reprints?|and|plus|&|the series|issues?)\s+', '', name, flags=re.I)
+            dangling = re.search(r'\s(?:and|plus|&)$', name, flags=re.I)
+            name = re.sub(r'\s+(?:and|plus|&)$', '', name, flags=re.I).strip(' ,&-')
+            if dangling and re.fullmatch(r'[\d\s.]*', name):
+                name = ''
             if name.lower() in ('', 'issues', 'issue', 'and', 'plus'):
                 of = re.match(r'\s*of\s+(?:the\s+)?(?:ongoing\s+|original\s+|classic\s+)?([A-Z][\w\'’.:/& -]*?)\s+(?:series|mini-?series|comic|title|run)\b',
                               clause[m.end():])
@@ -106,30 +112,81 @@ class _Library(object):
         for i in myDB.select('SELECT IssueID, ComicID, Issue_Number, ReleaseDate FROM issues'):
             self.issues[i['ComicID']][_num_key(i['Issue_Number'])] = dict(i)
 
-    def pick(self, name, year, nums, before, exclude):
+    def _pick(self, name, year, nums, before, exclude, slack):
         best = None
         for cid in self.byname.get(_norm(name), []):
             if cid == exclude:
                 continue
             c = self.comics[cid]
-            if year and str(c['ComicYear']) != str(year):
-                continue
+            if year:
+                try:
+                    gap = int(c['ComicYear']) - int(year)
+                except (TypeError, ValueError):
+                    continue
+                if (slack is not None and abs(gap) > slack) or (slack is None and gap < 0):
+                    continue
             iss = self.issues[cid]
             have = [n for n in nums if _num_key(n) in iss]
             if not have:
                 continue
             if before and any((iss[_num_key(n)]['ReleaseDate'] or '') > before for n in have):
                 continue
-            score = (len(have), c['ComicYear'] or '')
+            score = (len(have), str(c['ComicYear']) == str(year), c['ComicYear'] or '')
             if best is None or score > best[0]:
                 best = (score, cid)
         return best[1] if best else None
 
+    def pick(self, name, year, nums, before, exclude, context=None):
+        names = [name]
+        if _norm(name) in ('annual', 'annuals'):
+            if not context:
+                return None
+            for slack in (0, 1, 2):
+                cid = self._pick('%s Annual' % context[0], context[1], nums, before, exclude, slack)
+                if cid:
+                    return cid
+            return None
+        else:
+            bare = re.sub(r'\s*\bvol(?:ume)?\.?\s*\d+\b', ' ', name, flags=re.I).strip()
+            if bare != name:
+                names.append(bare)
+            if re.search(r'\s(?:and|&)\s', name):
+                names.append(re.split(r'\s(?:and|&)\s', name)[-1])
+        for nm in names:
+            slacks = [0, 1] if year else [None]
+            if year and before and self._has_volume(nm, year):
+                slacks.append(None)
+            for slack in slacks:
+                cid = self._pick(nm, year, nums, before, exclude, slack)
+                if cid:
+                    return cid
+        return None
+
+    def _has_volume(self, name, year):
+        for cid in self.byname.get(_norm(name), []):
+            try:
+                if abs(int(self.comics[cid]['ComicYear']) - int(year)) <= 1:
+                    return True
+            except (TypeError, ValueError):
+                pass
+        return False
+
     def resolve(self, segs, trade_name, before, exclude):
         found, missing = [], []
+        prev = None
         for name, year, nums in segs:
-            nm = name or _trade_base(trade_name)
-            cid = self.pick(nm, year, nums, before, exclude)
+            if name:
+                nm = name
+                cid = self.pick(nm, year, nums, before, exclude, context=prev)
+            else:
+                full = _trade_base(re.sub(r'[:–]', ' ', trade_name or ''))
+                nm = full
+                cid = self.pick(full, year, nums, before, exclude)
+                if cid is None and not re.search(r'[:–]', trade_name or ''):
+                    nm = _trade_base(trade_name)
+                    cid = self.pick(nm, year, nums, before, exclude)
+            if cid is not None and _norm(nm) not in ('annual', 'annuals'):
+                prev = (self.comics[cid]['ComicName'], self.comics[cid]['ComicYear'])
             if cid is None:
                 missing.append({'series': nm, 'year': year, 'nums': nums})
                 continue
@@ -360,10 +417,6 @@ def _metron_pass(myDB, lib, token, force):
 
 
 COVERAGE = ['fills_gaps', 'covered', 'partly', 'not_in_library', 'unknown']
-
-
-def _norm(name):
-    return re.sub(r'[^a-z0-9]+', '', (name or '').lower().replace('&', 'and'))
 
 
 def _trades(myDB, status, comics):
