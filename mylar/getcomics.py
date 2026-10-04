@@ -1141,22 +1141,34 @@ class GC(object):
                     for entry in tmp_links:
                         if isinstance(entry, dict):
                             url = entry.get('links')
-                            jd2_lt_site = entry.get('site').lower()
-                            if any([jd2_lt_site == 'main server', jd2_lt_site == 'download now', jd2_lt_site == 'mirror download']):
-                                jd2_priority_links[url] = jd2_priority_map['main']
-                            else:
-                                jd2_priority_links[url] = jd2_priority_map[jd2_lt_site]
-            
-                jd2_queue_payload = dict(queue_payload)
-                jd2_queue_payload.update({
-                    'jd2_job_id': 0,
-                    'jd2_priority_links': jd2_priority_links,
-                })
-                try:
-                    mylar.JD2_QUEUE.put(jd2_queue_payload)
-                    logger.info('[JD2] Enqueued %s for downloading.', tmp_filename)
-                except Exception as err:
-                    logger.warn('[JD2] Unable to enqueue %s for downloading: %s', tmp_filename, err)
+                            jd2_lt_site = (entry.get('site') or '').lower()
+                            if jd2_lt_site in ('main server', 'download now', 'mirror download'):
+                                continue
+                            jd2_priority_links[url] = jd2_priority_map.get(jd2_lt_site, 'DEFAULT')
+
+                main_entry = None
+                if len(links) == 1 and link_type not in ('GC-Main', 'GC-Mirror') and isinstance(tmp_links, list) and 'GC-Main' not in (link_type_failure or []):
+                    main_entry = next((e for e in tmp_links if isinstance(e, dict) and (e.get('site') or '').lower() in ('main server', 'download now', 'mirror download') and e.get('links')), None)
+                if main_entry is not None:
+                    queue_payload.update({'link': main_entry['links'], 'link_type': 'GC-Main'})
+                    link_type = 'GC-Main'
+                    myDB.upsert('ddl_info', {'link': main_entry['links'], 'link_type': 'GC-Main'}, ctrlval)
+
+                if link_type in ('GC-Main', 'GC-Mirror') or not jd2_priority_links:
+                    mylar.DDL_QUEUE.put(queue_payload)
+                    logger.info('[DDL] Trying the GetComics server for %s first; mirrors go to JD2 if it fails.', tmp_filename)
+                else:
+                    jd2_queue_payload = dict(queue_payload)
+                    jd2_queue_payload.update({
+                        'jd2_job_id': 0,
+                        'jd2_priority_links': jd2_priority_links,
+                    })
+                    try:
+                        mylar.JD2_QUEUE.put(jd2_queue_payload)
+                        logger.info('[JD2] Enqueued %s mirror links for %s.', len(jd2_priority_links), tmp_filename)
+                    except Exception as err:
+                        logger.warn('[JD2] Unable to enqueue %s for downloading: %s', tmp_filename, err)
+                        mylar.DDL_QUEUE.put(queue_payload)
             else:
                 mylar.DDL_QUEUE.put(queue_payload)
             cnt += 1

@@ -213,7 +213,7 @@ JD2_DEAD_STATUS = ('offline', 'file not found', 'not available', 'plugin defect'
 
 
 def jd2_fallback(myDB, item, record_id):
-    if item.get('jd2_fallback') or not item.get('mainlink') or not item.get('link_type') or not getattr(mylar.CONFIG, 'ENABLE_DDL', False):
+    if item.get('jd2_fallback') or item.get('link_type') not in ('GC-Main', 'GC-Mirror') or not item.get('mainlink') or not getattr(mylar.CONFIG, 'ENABLE_DDL', False):
         return False
     payload = dict(item)
     for k in ('jd2_job_id', 'jd2_priority_links'):
