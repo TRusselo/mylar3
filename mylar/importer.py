@@ -1609,6 +1609,9 @@ def updateissuedata(comicid, comicname=None, issued=None, comicIssues=None, call
         return importantdates
 
 def annual_check(ComicName, SeriesYear, comicid, issuetype, issuechk, annualslist, series_status):
+        if not mylar.CONFIG.ANNUALS_ON:
+            logger.fdebug('[IMPORTER-ANNUAL] Annual integration is off - not looking up annuals for %s.' % ComicName)
+            return None
         annualids = []   #to be used to make sure an ID isn't double-loaded
         annload = []
         anncnt = 0
