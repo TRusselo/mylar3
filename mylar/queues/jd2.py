@@ -103,7 +103,7 @@ def jd2_queue_monitor(queue):
 
             if jd2_client is not None and job_id:
                 try:
-                    status_payload = jd2_client.status(job_id)
+                    status_payload = jd2_client.status(job_id, record_id)
                 except Exception as err:
                     logger.warn('[JD2-QUEUE] Error polling job %s: %s', job_id, err)
                 else:
@@ -181,7 +181,7 @@ def jd2_queue_monitor(queue):
                                         'download_info': {'provider': 'JD2', 'id': record_id, 'job_id': job_id},
                                     })
                                     logger.info('[JD2-QUEUE] Submitted %s for post-processing (folder: %s).', job_filename, nzb_folder)
-                                    jd2_client.remove(job_id)
+                                    jd2_client.remove(job_id, record_id)
                                 except Exception as err:
                                     logger.warn('[JD2-QUEUE] Unable to enqueue %s for post-processing: %s', job_filename, err)
                             else:
@@ -193,7 +193,7 @@ def jd2_queue_monitor(queue):
                     if job_status in failed_states or jd2_status_is_dead(job_status):
                         reason = (status_payload or {}).get('reason') or job_status
                         logger.warn('[JD2-QUEUE] Download %s can not complete in JD2 (%s).', job_filename or record_id, reason)
-                        jd2_client.remove(job_id)
+                        jd2_client.remove(job_id, record_id)
                         if not jd2_fallback(myDB, item, record_id):
                             jd2_mark_failed(myDB, item, record_id, 'JD2 status %s' % reason)
                         continue

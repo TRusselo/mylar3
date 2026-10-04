@@ -33,6 +33,9 @@ from operator import itemgetter
 from mylar import db, logger, helpers, search_filer, ddlsources
 from mylar.downloaders.jdownloader2 import JDownloader2
 
+FILE_CLEARANCE = {}
+
+
 class GC(object):
 
     def cookie_receipt(self, main_url=None):
@@ -68,6 +71,7 @@ class GC(object):
                         gc_cookie = gc_json['solution']['cookies']
                         with open(self.session_path, 'w') as f:
                             json.dump(gc_cookie, f)
+                        self._save_ua(gc_json['solution'].get('userAgent'))
                     except Exception as e:
                         logger.warn('[GC_Cookie_Saver] Unable to save cookie to file - will try to recreate later.')
                     else:
@@ -115,11 +119,63 @@ class GC(object):
                     os.remove(self.session_path)
             else:
                 logger.fdebug('[GC_Cookie_Loader] Successfully loaded cookie from file.')
+                self._load_ua()
                 test_success = True
 
         if flare_test is True:
             return test_success
 
+
+    def _save_ua(self, ua):
+        if not ua:
+            return
+        self.headers['User-Agent'] = ua
+        try:
+            with open(self.session_path + '.ua', 'w') as f:
+                f.write(ua)
+        except Exception:
+            pass
+
+    def _load_ua(self):
+        try:
+            with open(self.session_path + '.ua') as f:
+                ua = f.read().strip()
+        except Exception:
+            return
+        if ua:
+            self.headers['User-Agent'] = ua
+
+    @staticmethod
+    def is_challenge(resp):
+        ctype = str(resp.headers.get('Content-Type') or '').lower()
+        return resp.status_code in (403, 503) or 'text/html' in ctype
+
+    def apply_file_clearance(self):
+        for host, (cookies, ua) in list(FILE_CLEARANCE.items()):
+            for c in cookies:
+                self.session.cookies.set(name=c['name'], value=c['value'], domain=c.get('domain') or host)
+            if ua:
+                self.headers['User-Agent'] = ua
+
+    def refresh_clearance(self, url):
+        if not mylar.CONFIG.ENABLE_FLARESOLVERR or not mylar.CONFIG.FLARESOLVERR_URL:
+            return False
+        host = urllib.parse.urlparse(url).netloc
+        if not host:
+            return False
+        try:
+            r = self.session.post(mylar.CONFIG.FLARESOLVERR_URL, json={'cmd': 'request.get', 'url': 'https://%s/' % host, 'maxTimeout': 60000},
+                                  headers=self.flare_headers, verify=False, timeout=90)
+            solution = r.json()['solution']
+            cookies = solution['cookies']
+        except Exception as e:
+            logger.warn('[GC_Cookie_Refresh] FlareSolverr could not clear %s: %s' % (host, e))
+            return False
+        FILE_CLEARANCE[host] = (cookies, solution.get('userAgent'))
+        self._save_ua(solution.get('userAgent'))
+        self.apply_file_clearance()
+        logger.info('[GC_Cookie_Refresh] Cleared the Cloudflare check on %s through FlareSolverr.' % host)
+        return True
 
     def __init__(self, query=None, issueid=None, comicid=None, oneoff=False, session_path=None, provider_stat=None):
 
@@ -1207,6 +1263,7 @@ class GC(object):
         mylar.DDL_QUEUED.append(id)
         filename = None
         self.cookie_receipt()
+        self.apply_file_clearance()
         try:
             with requests.Session() as s:
                 if resume is not None:
@@ -1222,6 +1279,17 @@ class GC(object):
                     stream=True,
                     timeout=(30,30)
                 )
+
+                if self.is_challenge(t):
+                    logger.info('[DDL] GetComics returned a challenge page instead of the file - refreshing the clearance and retrying.')
+                    t.close()
+                    if self.refresh_clearance(t.url):
+                        t = self.session.get(link, verify=True, headers=self.headers, stream=True, timeout=(30,30))
+                    if self.is_challenge(t):
+                        t.close()
+                        logger.warn('[DDL] Still blocked by GetComics/Cloudflare - giving up on this link.')
+                        mylar.DDL_LOCK = False
+                        return {"success": False, "filename": None, "path": None, "link_type": link_type}
 
                 filename = os.path.basename(
                     urllib.parse.unquote(t.url)

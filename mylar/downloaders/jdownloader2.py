@@ -172,53 +172,65 @@ class JDownloader2(object):
     DEAD = ('offline', 'file not found', 'not available', 'plugin defect', 'aborted', 'blocked by cloudflare', 'failed', 'error')
 
     def _links(self, endpoint, query):
-        query = dict(query, status=True, finished=True, packageUUID=True, jobUUID=True, uuid=True, name=True, maxResults=1000, startAt=0)
+        extra = {'availability': True} if endpoint.startswith('linkgrabber') else {'finished': True}
+        query = dict(query, status=True, packageUUID=True, jobUUID=True, uuid=True, name=True, maxResults=1000, startAt=0, **extra)
         r = self.session.get(self._url(endpoint), params={'queryParams': json.dumps(query)}, timeout=self.timeout)
         r.raise_for_status()
         data = (r.json() or {}).get('data') or []
         return [l for l in data if isinstance(l, dict)]
 
-    def _package_links(self, job_id):
-        own = self._links('downloadsV2/queryLinks', {'jobUUIDs': [job_id]})
-        packages = sorted({l.get('packageUUID') for l in own if l.get('packageUUID')})
-        if not packages:
-            return own, packages
-        return self._links('downloadsV2/queryLinks', {'packageUUIDs': packages}), packages
+    def _packages(self, area, record_id):
+        if not record_id:
+            return []
+        r = self.session.get(self._url('%s/queryPackages' % area), params={'queryParams': json.dumps({'uuid': True, 'name': True})}, timeout=self.timeout)
+        r.raise_for_status()
+        suffix = ' - %s' % record_id
+        return sorted({p.get('uuid') for p in (r.json() or {}).get('data') or [] if isinstance(p, dict) and str(p.get('name') or '').endswith(suffix)})
 
-    def status(self, job_id: str) -> Dict[str, Any]:
-        if job_id is None:
+    def _job_links(self, job_id, record_id=None):
+        found = {}
+        for area, endpoint in (('downloadsV2', 'downloadsV2/queryLinks'), ('linkgrabberv2', 'linkgrabberv2/queryLinks')):
+            packages = set(self._packages(area, record_id))
+            if job_id:
+                packages |= {l.get('packageUUID') for l in self._links(endpoint, {'jobUUIDs': [job_id]}) if l.get('packageUUID')}
+            links = self._links(endpoint, {'packageUUIDs': sorted(packages)}) if packages else []
+            found[area] = (links, sorted(packages))
+        return found
+
+    def _package_links(self, job_id, record_id=None):
+        links, packages = self._job_links(job_id, record_id)['downloadsV2']
+        return links, packages
+
+    def status(self, job_id: str, record_id: Optional[str] = None) -> Dict[str, Any]:
+        if job_id is None and record_id is None:
             return {'found': False, 'status': None, 'data': None}
         try:
-            links, packages = self._package_links(job_id)
+            found = self._job_links(job_id, record_id)
         except Exception as err:
             logger.warn('[JD2] Unable to query job %s: %s', job_id, err)
             return {'found': True, 'status': None, 'data': None}
-        if not links:
+        links = found['downloadsV2'][0]
+        grabber = found['linkgrabberv2'][0]
+        if not links and not grabber:
             return {'found': False, 'status': None, 'data': None}
         done = [l for l in links if l.get('finished') is True or any(d in str(l.get('status') or '').lower() for d in self.DONE)]
         if done:
             return {'found': True, 'status': 'Finished', 'data': done[0]}
-        states = [str(l.get('status') or '').lower() for l in links]
+        states = [str(l.get('status') or '').lower() for l in links] + [str(l.get('availability') or '').lower() for l in grabber]
         if all(st and any(d in st for d in self.DEAD) for st in states):
-            return {'found': True, 'status': 'Failed', 'data': links[0],
-                    'reason': '; '.join(sorted({str(l.get('status')) for l in links}))}
-        return {'found': True, 'status': links[0].get('status') or 'Queued', 'data': links[0]}
+            reasons = {str(l.get('status')) for l in links} | {str(l.get('availability')) for l in grabber}
+            return {'found': True, 'status': 'Failed', 'data': (links or grabber)[0], 'reason': '; '.join(sorted(reasons))}
+        first = (links or grabber)[0]
+        return {'found': True, 'status': first.get('status') or 'Queued', 'data': first}
 
-    def remove(self, job_id: str) -> None:
-        if not job_id:
+    def remove(self, job_id: str, record_id: Optional[str] = None) -> None:
+        if not job_id and not record_id:
             return
         try:
-            links, packages = self._package_links(job_id)
-            names = {l.get('packageName') or '' for l in links}
-            if packages:
-                self.session.get(self._url('downloadsV2/removeLinks'), params={'linkIds': '[]', 'packageIds': json.dumps(packages)}, timeout=self.timeout)
-            r = self.session.get(self._url('linkgrabberv2/queryPackages'), params={'queryParams': json.dumps({'uuid': True, 'name': True})}, timeout=self.timeout)
-            pkg_names = {p.get('uuid'): p.get('name') for p in (r.json() or {}).get('data') or [] if isinstance(p, dict)}
-            down = self.session.get(self._url('downloadsV2/queryPackages'), params={'queryParams': json.dumps({'uuid': True, 'name': True})}, timeout=self.timeout)
-            gone = {p.get('name') for p in (down.json() or {}).get('data') or [] if isinstance(p, dict) and p.get('uuid') in packages}
-            names = {n for n in names if n} | gone
-            stale = [u for u, n in pkg_names.items() if n in names]
-            if stale:
-                self.session.get(self._url('linkgrabberv2/removeLinks'), params={'linkIds': '[]', 'packageIds': json.dumps(stale)}, timeout=self.timeout)
+            found = self._job_links(job_id, record_id)
+            for area in ('downloadsV2', 'linkgrabberv2'):
+                packages = found[area][1]
+                if packages:
+                    self.session.get(self._url('%s/removeLinks' % area), params={'linkIds': '[]', 'packageIds': json.dumps(packages)}, timeout=self.timeout)
         except Exception as err:
             logger.warn('[JD2] Unable to remove job %s from JD2: %s', job_id, err)
