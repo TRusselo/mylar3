@@ -285,6 +285,16 @@
                                    <input type="text" placeholder="None" onfocus="if(this.value==this.defaultValue) this.value='$config["comicvine_api"]}';" name="comicvine_api" id="comicvine_api" value="${config['comicvine_api']}" title="get one for free @ https://comicvine.gamespot.com/api" size="40">
                                    <small>specify your own CV API key here </small>
                                 </div>
+                                <div class="row">
+                                   <label>Metron API Token</label>
+                                   %if config['metron_env']:
+                                   <input type="password" id="metron_api_token" value="" placeholder="Set by the METRON_API_TOKEN environment variable" size="40" disabled>
+                                   %else:
+                                   <input type="password" autocomplete="off" name="metron_api_token" id="metron_api_token" value="${config['metron_api_token']}" placeholder="None" size="40">
+                                   %endif
+                                   <input type="button" value="Test Metron" id="test_metron">
+                                   <small id="metron_status">Used by the Ledger to read what collected editions reprint. Generate one on your metron.cloud profile under API Tokens.</small>
+                                </div>
 
                                 <div class="row">
                                     <div class="row checkbox">
@@ -2889,6 +2899,14 @@ $("#enable_airdcpp").click(function(){
                     $('#ajaxMsg').addClass('success').fadeIn().delay(3000).fadeOut();
                 });
 
+                $('#test_metron').click(function () {
+                    var box = $('#metron_status');
+                    box.text('Testing…');
+                    $.getJSON('metron_test', { token: $('#metron_api_token').val() || '' }, function (r) {
+                        box.text(r.message).css('color', r.ok ? 'var(--t-ok, #3d7a4a)' : 'var(--t-fail, #c0392b)');
+                        $('#ajaxMsg').removeClass().html("<div class='msg'><span class='ui-icon ui-icon-" + (r.ok ? 'check' : 'alert') + "'></span>" + r.message + "</div>").addClass(r.ok ? 'success' : 'error').fadeIn().delay(3000).fadeOut();
+                    });
+                });
                 $('#test_sab').click(function () {
                     var imagechk = document.getElementById("sabnzbd_statusicon");
                     var sabhost = document.getElementById("sab_host").value;

@@ -4699,13 +4699,10 @@ class WebInterface(object):
         return json.dumps(ledger.status_summary())
     ledger_status.exposed = True
 
-    def ledger_metron(self, token='', **kwargs):
+    def metron_test(self, token='', **kwargs):
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        token = token.strip()
-        mylar.CONFIG.METRON_API_TOKEN = token or None
-        mylar.CONFIG.writeconfig(values={'metron_api_token': token or None})
-        return json.dumps({'ok': True, 'metron': bool(token)})
-    ledger_metron.exposed = True
+        return json.dumps(ledger.metron_test(token))
+    metron_test.exposed = True
 
     def ledger_cutoff(self, cutoff='', **kwargs):
         cherrypy.response.headers['Content-Type'] = 'application/json'
@@ -7141,6 +7138,8 @@ class WebInterface(object):
 
         config = {
                     "comicvine_api": mylar.CONFIG.COMICVINE_API,
+                    "metron_api_token": mylar.CONFIG.METRON_API_TOKEN if mylar.CONFIG.METRON_API_TOKEN not in (None, 'None') else '',
+                    "metron_env": bool(os.environ.get('METRON_API_TOKEN')),
                     "comicvine_url": mylar.CONFIG.COMICVINE_URL,
                     "http_host": mylar.CONFIG.HTTP_HOST,
                     "http_user": mylar.CONFIG.HTTP_USERNAME,

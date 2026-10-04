@@ -5,7 +5,7 @@
   var CK = ['fills_gaps', 'covered', 'partly', 'not_in_library', 'unknown'];
   var CC = ['--lg-gap', '--lg-done', '--lg-after', '--lg-before', '--lg-cut'];
   var CL = ['Fills gaps', 'Duplicates singles', 'Partly covered', 'Not in library', 'No contents info'];
-  var CH = ['Collects issues you don\'t have as singles', 'You own every issue it collects', 'Some collected issues aren\'t in Mylar', 'Collects series you don\'t track', 'ComicVine doesn\'t list what it collects'];
+  var CH = ['Collects issues you don\'t have as singles', 'You own every issue it collects', 'Some collected issues aren\'t in Mylar', 'Collects series you don\'t track', 'No source lists what it collects'];
 
   var st = {
     tab: 'missing', by: 'issue', kinds: { missing: [0], collected: [0, 1] }, q: '', pub: '', dec: '',
@@ -190,7 +190,7 @@
     }).join('') : '<tr><td class="lg-empty" colspan="7">' + (C.trades.length ? 'No editions match these filters.' : 'Trade contents haven\'t been read yet. Use the button above.') + '</td></tr>');
     $id('lg-count').textContent = fmt(Math.min(st.limit, f.length)) + ' of ' + fmt(f.length) + ' editions';
     $id('lg-more').hidden = f.length <= st.limit;
-    $id('lg-note').textContent = 'Contents come from ComicVine\'s description of each edition, so editions without a "Collects …" line can\'t be checked. "Ignore issues it covers" marks the singles you don\'t have as Ignored, since you own them in this edition.';
+    $id('lg-note').textContent = 'Contents come from each edition\'s ComicVine description and, when a Metron token is set, Metron\'s reprint list. Editions neither source describes can\'t be checked. "Ignore issues it covers" marks the singles you don\'t have as Ignored, since you own them in this edition.';
   }
 
   $('#lg-table').on('click', '[data-open]', function () { var k = this.getAttribute('data-open'); st.open[k] = !st.open[k]; render(); });
@@ -243,11 +243,11 @@
     var t;
     if (s.running) t = (s.phase || 'Working') + ': ' + fmt(s.done) + ' of ' + fmt(s.total) + ' editions';
     else if (s.error) t = 'Last read failed: ' + s.error;
-    else if (s.stored) t = fmt(s.stored) + ' editions read, last on ' + s.updated + '.' + (s.metron ? ' Metron is connected (' + fmt(s.metron_found || 0) + ' explained by Metron).' : ' Add a Metron token to check editions ComicVine can\'t explain.');
+    else if (s.stored) t = fmt(s.stored) + ' editions read, last on ' + s.updated + '. Sources: ComicVine' + (s.metron ? ' and Metron (' + fmt(s.metron_found || 0) + ' explained by Metron).' : '. Add a Metron API token in Settings to check more editions.');
     else t = 'Trade contents haven\'t been read yet.';
     $id('lg-build-text').textContent = t;
     $('#lg-build-btn, #lg-rebuild-btn').prop('disabled', !!s.running);
-    $id('lg-build-btn').textContent = s.stored ? 'Read new editions' : 'Read trade contents from ComicVine';
+    $id('lg-build-btn').textContent = s.stored ? 'Read new editions' : 'Read trade contents';
     if (s.running && !poll) poll = setInterval(function () {
       $.getJSON('ledger_status', function (x) {
         buildBar(x);
@@ -255,10 +255,6 @@
       });
     }, 4000);
   }
-  $('#lg-metron-save').on('click', function () {
-    var v = $id('lg-metron-token').value.trim();
-    $.post('ledger_metron', { token: v }, function (r) { $id('lg-metron-token').value = ''; $.getJSON('ledger_status', function (x) { buildBar(x); }); }, 'json');
-  });
   $('#lg-build-btn').on('click', function () { $.getJSON('ledger_build', { force: 0 }, function (r) { buildBar(r.status); }); });
   $('#lg-rebuild-btn').on('click', function () { $.getJSON('ledger_build', { force: 1 }, function (r) { buildBar(r.status); }); });
 

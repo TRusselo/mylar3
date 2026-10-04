@@ -180,6 +180,30 @@ def _reprint_segments(reprints, trade_year):
     return segs
 
 
+def metron_token():
+    import os
+    tok = os.environ.get('METRON_API_TOKEN') or getattr(mylar.CONFIG, 'METRON_API_TOKEN', None)
+    return tok if tok and tok != 'None' else None
+
+
+def metron_test(token=None):
+    token = (token or '').strip() or metron_token()
+    if not token:
+        return {'ok': False, 'message': 'No Metron API token is set.'}
+    try:
+        r = requests.get('https://metron.cloud/api/publisher/', params={'name': 'Marvel'},
+                         headers={'Authorization': 'Bearer %s' % token, 'User-Agent': 'Mylar3 ledger'}, timeout=30)
+    except Exception as e:
+        return {'ok': False, 'message': 'Could not reach Metron: %s' % e}
+    if r.status_code == 200:
+        return {'ok': True, 'message': 'Connected to Metron.'}
+    if r.status_code in (401, 403):
+        return {'ok': False, 'message': 'Metron rejected the token. Generate a new one on your Metron profile page.'}
+    if r.status_code == 429:
+        return {'ok': False, 'message': 'Metron is rate limiting requests. Try again in a minute.'}
+    return {'ok': False, 'message': 'Metron answered with HTTP %s.' % r.status_code}
+
+
 def start_build(force=False):
     with _lock:
         if _status['running']:
@@ -222,8 +246,8 @@ def _build(force):
                                                 'IssueIDs': json.dumps(found), 'Unresolved': json.dumps(missing), 'Updated': now},
                             {'TradeIssueID': t['IssueID']})
             _status['done'] = min(len(todo), k + 100)
-        token = getattr(mylar.CONFIG, 'METRON_API_TOKEN', None)
-        if token and token != 'None':
+        token = metron_token()
+        if token:
             _metron_pass(myDB, lib, token, force)
         _status.update(phase='Finished')
         logger.info('[LEDGER] Collected-edition contents read for %s trade issues.' % len(todo))
@@ -343,7 +367,6 @@ def status_summary(myDB=None):
     _ensure_table(myDB)
     row = myDB.selectone('SELECT count(*), max(Updated) FROM ledger_collects').fetchone()
     s = status()
-    tok = getattr(mylar.CONFIG, 'METRON_API_TOKEN', None)
-    s.update(stored=row[0], updated=row[1], metron=bool(tok and tok != 'None'),
+    s.update(stored=row[0], updated=row[1], metron=bool(metron_token()),
              metron_found=myDB.selectone("SELECT count(*) FROM ledger_collects WHERE Source='metron'").fetchone()[0])
     return s
