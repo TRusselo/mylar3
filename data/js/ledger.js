@@ -1,11 +1,13 @@
 (function () {
-  var MK = ['--lg-gap', '--lg-unrec', '--lg-after', '--lg-before', '--lg-cut'];
-  var ML = ['Gap', 'Files not recognised', 'After last owned', 'Before first owned', 'After collection ended'];
-  var MH = ['Owned issues on both sides', 'Series has files Mylar can\'t match', 'Past your last owned issue', 'Before your first owned issue', 'Released after your cutoff date'];
-  var CK = ['fills_gaps', 'covered', 'partly', 'not_in_library', 'unknown'];
-  var CC = ['--lg-gap', '--lg-done', '--lg-after', '--lg-before', '--lg-cut'];
-  var CL = ['Fills gaps', 'Duplicates singles', 'Partly covered', 'Not in library', 'No contents info'];
-  var CH = ['Collects issues you don\'t have as singles', 'You own every issue it collects', 'Some collected issues aren\'t in Mylar', 'Collects series you don\'t track', 'No source lists what it collects'];
+  var MK = ['--lg-gap', '--lg-unrec', '--lg-after', '--lg-before', '--lg-cut', '--lg-done'];
+  var ML = ['Gap', 'Files not recognised', 'After last owned', 'Before first owned', 'After collection ended', 'Complete'];
+  var MH = ['Owned issues on both sides', 'Series has files Mylar can\'t match', 'Past your last owned issue', 'Before your first owned issue', 'Released after your cutoff date', 'Series where you have every issue'];
+  var COMPLETE = 5;
+  var CK = ['fills_gaps', 'covered', 'dup_plus', 'partly', 'not_in_library', 'unknown'];
+  var CC = ['--lg-gap', '--lg-done', '--lg-plus', '--lg-after', '--lg-before', '--lg-cut'];
+  var CL = ['Fills gaps', 'Duplicates singles', 'Duplicates + tie-ins', 'Partly covered', 'Not in library', 'No contents info'];
+  var CH = ['Collects issues you don\'t have as singles', 'You own every issue it collects', 'Every tracked issue owned, plus tie-ins from series you don\'t track', 'Its own series has issues Mylar doesn\'t track', 'Collects series you don\'t track', 'No source lists what it collects'];
+  var BOOK = '<svg class="lg-ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 4.2C6.6 3 4.4 2.6 1.5 2.8v9.6c2.9-.2 5.1.2 6.5 1.4 1.4-1.2 3.6-1.6 6.5-1.4V2.8c-2.9-.2-5.1.2-6.5 1.4zM8 4.2v9.6"/></svg>';
 
   var st = {
     tab: 'missing', by: 'issue', kinds: { missing: [0], collected: [0, 1] }, q: '', pub: '', dec: '',
@@ -28,9 +30,9 @@
   function tiles() {
     var counts, L, H, K, keys = st.kinds[st.tab];
     if (st.tab === 'missing') {
-      counts = [0, 0, 0, 0, 0]; M.rows.forEach(function (r) { counts[r[0]]++; }); L = ML; H = MH; K = MK;
+      counts = [0, 0, 0, 0, 0, M.complete.length]; M.rows.forEach(function (r) { counts[r[0]]++; }); L = ML; H = MH; K = MK;
     } else {
-      counts = [0, 0, 0, 0, 0]; C.trades.forEach(function (t) { if (!st.owned || isOwned(t)) counts[CK.indexOf(t.coverage)]++; }); L = CL; H = CH; K = CC;
+      counts = [0, 0, 0, 0, 0, 0]; C.trades.forEach(function (t) { if (!st.owned || isOwned(t)) counts[CK.indexOf(t.coverage)]++; }); L = CL; H = CH; K = CC;
     }
     $id('lg-tiles').innerHTML = L.map(function (l, i) {
       if (st.tab === 'missing' && i === 4 && !M.cutoff) return '';
@@ -41,7 +43,9 @@
   $('#lg-tiles').on('click', '.lg-tile', function () {
     var k = +this.getAttribute('data-k'), a = st.kinds[st.tab], p = a.indexOf(k);
     if (p >= 0) a.splice(p, 1); else a.push(k);
-    this.setAttribute('aria-pressed', p < 0); st.limit = 300; save(); render();
+    this.setAttribute('aria-pressed', p < 0); st.limit = 300; save();
+    if (st.tab === 'missing' && k === COMPLETE && p < 0 && st.by === 'issue') { setBy('series'); return; }
+    render();
   });
 
   function filters() {
@@ -104,6 +108,28 @@
   });
   $('#lg-table').on('keydown', 'th[data-key]', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $(this).click(); } });
 
+  function tradeName(T) { return T[0] + ' (' + T[1] + ') #' + T[2]; }
+  function tradeCell(list) {
+    if (!list || !list.length) return '<span class="lg-dim">—</span>';
+    var mine = list.filter(function (i) { return M.trades[i][4]; }), other = list.filter(function (i) { return !M.trades[i][4]; });
+    var html = mine.map(function (i) {
+      var T = M.trades[i];
+      return '<a class="lg-trade" style="--c:var(--lg-done)" href="comicDetails?ComicID=' + T[3] + '" title="You own this in ' + esc(tradeName(T)) + '">' + BOOK + '<span>' + esc(tradeName(T)) + '</span></a>';
+    }).join('');
+    if (other.length) html += '<span class="lg-trade lg-trade-out" title="Collected in ' + esc(other.map(function (i) { return tradeName(M.trades[i]); }).join(', ')) + ' (not owned)">' + BOOK + '<span>' + (other.length === 1 ? esc(tradeName(M.trades[other[0]])) : other.length + ' trades') + '</span></span>';
+    return html;
+  }
+  function seriesTrades(list) {
+    if (!list || !list.length) return '<span class="lg-dim">—</span>';
+    var g = {};
+    list.forEach(function (i) { var T = M.trades[i]; if (!T[4]) return; (g[T[5]] = g[T[5]] || []).push(tradeName(T)); });
+    var keys = Object.keys(g).map(Number).sort();
+    if (!keys.length) return '<span class="lg-trade lg-trade-out" title="Collected in trades you don\'t own">' + BOOK + '<span>' + list.length + ' not owned</span></span>';
+    return keys.map(function (k) {
+      return '<span class="lg-trade" style="--c:var(' + CC[k] + ')" title="' + esc(CL[k] + ': ' + g[k].join(', ')) + '">' + BOOK + '<span>' + CL[k] + (g[k].length > 1 ? ' ×' + g[k].length : '') + '</span></span>';
+    }).join('');
+  }
+
   function missingRows() {
     var keys = st.kinds.missing;
     return M.rows.filter(function (r) {
@@ -124,8 +150,9 @@
 
   function renderIssues() {
     var f = missingRows(), s = st.sort || { key: 'k', dir: 1 };
-    head([['k', 'Kind'], ['series', 'Series'], ['n', '#', 'num'], ['t', 'Title'], ['d', 'Released'], ['st', 'Status'], ['own', 'Series owned', 'num']], true);
-    var v = function (r) { var S = M.series[r[1]]; return s.key === 'series' ? S[0].toLowerCase() : s.key === 'own' ? S[2] / (S[3] || 1) : s.key === 'k' ? r[0] : s.key === 'n' ? r[3] : s.key === 't' ? r[4] : s.key === 'd' ? r[5] : r[7]; };
+    head([['k', 'Kind'], ['series', 'Series'], ['n', '#', 'num'], ['t', 'Title'], ['d', 'Released'], ['st', 'Status'], ['tr', 'Trades'], ['own', 'Series owned', 'num']], true);
+    var tv = function (r) { var l = r[8] || []; return l.some(function (i) { return M.trades[i][4]; }) ? 2 : l.length ? 1 : 0; };
+    var v = function (r) { var S = M.series[r[1]]; return s.key === 'series' ? S[0].toLowerCase() : s.key === 'own' ? S[2] / (S[3] || 1) : s.key === 'k' ? r[0] : s.key === 'n' ? r[3] : s.key === 't' ? r[4] : s.key === 'd' ? r[5] : s.key === 'tr' ? -tv(r) : r[7]; };
     f.sort(function (a, b) { return s.dir * cmp(v(a), v(b)) || cmp(M.series[a[1]][0], M.series[b[1]][0]) || cmp(a[3], b[3]); });
     var page = f.slice(0, st.limit);
     $('#lg-table tbody').html(page.length ? page.map(function (r) {
@@ -135,29 +162,35 @@
         '<td><a href="comicDetails?ComicID=' + S[5] + '">' + esc(S[0]) + '</a> <span class="lg-dim">(' + esc(S[1]) + ')</span><br><small class="lg-dim">' + esc(M.pubs[S[4]]) + '</small></td>' +
         '<td class="num lg-mono"><a href="https://comicvine.gamespot.com/issue/4000-' + r[6] + '/" target="_blank" rel="noopener">' + esc(r[2]) + '</a></td>' +
         '<td class="lg-dim lg-title-cell">' + (esc(r[4]) || '—') + '</td><td class="lg-mono">' + (r[5] || '—') + '</td>' +
-        '<td><span class="lg-status lg-st-' + esc(r[7]) + '">' + esc(r[7]) + '</span></td><td class="num lg-mono">' + S[2] + ' / ' + S[3] + '</td></tr>';
-    }).join('') : '<tr><td class="lg-empty" colspan="8">No issues match. Turn on more kinds above or clear the search.</td></tr>');
+        '<td><span class="lg-status lg-st-' + esc(r[7]) + '">' + esc(r[7]) + '</span></td><td class="lg-trades">' + tradeCell(r[8]) + '</td><td class="num lg-mono">' + S[2] + ' / ' + S[3] + '</td></tr>';
+    }).join('') : '<tr><td class="lg-empty" colspan="9">' + (st.kinds.missing.length === 1 && st.kinds.missing[0] === COMPLETE ? 'Complete series are listed in the By series view.' : 'No issues match. Turn on more kinds above or clear the search.') + '</td></tr>');
     $id('lg-count').textContent = fmt(Math.min(st.limit, f.length)) + ' of ' + fmt(f.length) + ' issues';
     $id('lg-more').hidden = f.length <= st.limit;
-    $id('lg-note').textContent = 'Wanted starts a search for those issues. Ignored stops Mylar from ever searching for them. Series lost completely aren\'t in Mylar, so they can\'t show here.';
+    $id('lg-note').textContent = 'Trades: a filled book means a trade you own collects the issue; an outlined one means a trade you don\'t own collects it. Wanted starts a search for those issues. Ignored stops Mylar from ever searching for them. Series lost completely aren\'t in Mylar, so they can\'t show here.';
   }
 
   function renderSeries() {
     var f = missingRows(), g = {};
     f.forEach(function (r) { var x = g[r[1]] || (g[r[1]] = { s: r[1], c: [0, 0, 0, 0, 0], ids: [] }); x.c[r[0]]++; x.ids.push(r[6]); });
     var s = st.sort || { key: 'gap', dir: -1 };
-    var list = Object.keys(g).map(function (k) { var x = g[k], S = M.series[x.s]; x.series = S[0].toLowerCase(); x.pub = M.pubs[S[4]]; x.own = S[2] / (S[3] || 1); x.gap = x.c[0]; x.other = x.c[1] + x.c[2] + x.c[3] + x.c[4]; return x; });
+    if (st.kinds.missing.indexOf(COMPLETE) >= 0) M.complete.forEach(function (si) {
+      var S = M.series[si];
+      if (g[si] || (st.pub && M.pubs[S[4]] !== st.pub) || (st.q && S[0].toLowerCase().indexOf(st.q) < 0)) return;
+      g[si] = { s: si, c: [0, 0, 0, 0, 0], ids: [], done: true };
+    });
+    var list = Object.keys(g).map(function (k) { var x = g[k], S = M.series[x.s]; x.series = S[0].toLowerCase(); x.pub = M.pubs[S[4]]; x.own = S[2] / (S[3] || 1); x.gap = x.c[0]; x.other = x.c[1] + x.c[2] + x.c[3] + x.c[4]; x.tr = -(S[6] || []).length; return x; });
     list.sort(function (a, b) { return s.dir * cmp(a[s.key], b[s.key]) || cmp(a.series, b.series); });
-    head([['series', 'Series'], ['pub', 'Publisher'], ['own', 'Owned', 'num'], ['gap', 'Gaps', 'num'], ['other', 'Other missing', 'num'], ['mix', 'Breakdown']], true);
+    head([['series', 'Series'], ['pub', 'Publisher'], ['own', 'Owned', 'num'], ['gap', 'Gaps', 'num'], ['other', 'Other missing', 'num'], ['tr', 'Trades'], ['mix', 'Breakdown']], true);
     var page = list.slice(0, st.limit);
     $('#lg-table tbody').html(page.length ? page.map(function (x) {
       var S = M.series[x.s], tot = S[3] || 1, all = x.ids.every(function (i) { return st.sel[i]; });
       var seg = function (n, c) { return n ? '<i style="width:' + (100 * n / tot) + '%;background:var(' + c + ')" title="' + n + '"></i>' : ''; };
-      return '<tr class="' + (all ? 'lg-on' : '') + '"><td class="lg-chk"><input type="checkbox" data-ids="' + x.ids.join(',') + '"' + (all ? ' checked' : '') + ' aria-label="Select all missing issues in this series"></td>' +
+      if (x.done) all = false;
+      return '<tr class="' + (all ? 'lg-on' : '') + (x.done ? ' lg-complete' : '') + '"><td class="lg-chk">' + (x.done ? '' : '<input type="checkbox" data-ids="' + x.ids.join(',') + '"' + (all ? ' checked' : '') + ' aria-label="Select all missing issues in this series">') + '</td>' +
         '<td><a href="comicDetails?ComicID=' + S[5] + '">' + esc(S[0]) + '</a> <span class="lg-dim">(' + esc(S[1]) + ')</span></td><td>' + esc(M.pubs[S[4]]) + '</td>' +
-        '<td class="num lg-mono">' + S[2] + ' / ' + S[3] + '</td><td class="num lg-mono lg-strong">' + (x.gap || '') + '</td><td class="num lg-mono">' + (x.other || '') + '</td>' +
-        '<td><div class="lg-bar">' + seg(S[2], '--lg-done') + x.c.map(function (n, i) { return seg(n, MK[i]); }).join('') + '</div></td></tr>';
-    }).join('') : '<tr><td class="lg-empty" colspan="7">No series match these filters.</td></tr>');
+        '<td class="num lg-mono">' + S[2] + ' / ' + S[3] + '</td><td class="num lg-mono lg-strong">' + (x.gap || '') + '</td><td class="num lg-mono">' + (x.done ? '<span class="lg-pill" style="--c:var(--lg-done)">Complete</span>' : (x.other || '')) + '</td>' +
+        '<td class="lg-trades">' + seriesTrades(S[6]) + '</td><td><div class="lg-bar">' + seg(S[2], '--lg-done') + x.c.map(function (n, i) { return seg(n, MK[i]); }).join('') + '</div></td></tr>';
+    }).join('') : '<tr><td class="lg-empty" colspan="8">No series match these filters.</td></tr>');
     $id('lg-count').textContent = fmt(Math.min(st.limit, list.length)) + ' of ' + fmt(list.length) + ' series';
     $id('lg-more').hidden = list.length <= st.limit;
     $id('lg-note').textContent = 'Selecting a series selects all of its missing issues that match the filters.';
@@ -174,23 +207,23 @@
     });
     var v = function (t) { return s.key === 'cov' ? CK.indexOf(t.coverage) : s.key === 'name' ? t.name.toLowerCase() : s.key === 'lacking' ? t.lacking.length : s.key === 'found' ? t.own / (t.found || 1) : s.key === 'tstatus' ? t.tstatus : t.collects; };
     f.sort(function (a, b) { return s.dir * cmp(v(a), v(b)) || cmp(a.name, b.name); });
-    head([['cov', 'Coverage'], ['name', 'Collected edition'], ['collects', 'Collects'], ['found', 'Singles owned', 'num'], ['lacking', 'Covers missing', 'num'], ['tstatus', 'Edition status']], true);
+    head([['cov', 'Coverage'], ['name', 'Trade'], ['collects', 'Collects'], ['found', 'Singles owned', 'num'], ['lacking', 'Covers missing', 'num'], ['tstatus', 'Trade status']], true);
     var page = f.slice(0, st.limit);
     $('#lg-table tbody').html(page.length ? page.map(function (t) {
       var i = CK.indexOf(t.coverage), open = st.open[t.iid];
-      var row = '<tr class="' + (st.sel[t.iid] ? 'lg-on' : '') + '"><td class="lg-chk"><input type="checkbox" data-id="' + t.iid + '"' + (st.sel[t.iid] ? ' checked' : '') + ' aria-label="Select edition"></td>' +
+      var row = '<tr class="' + (st.sel[t.iid] ? 'lg-on' : '') + '"><td class="lg-chk"><input type="checkbox" data-id="' + t.iid + '"' + (st.sel[t.iid] ? ' checked' : '') + ' aria-label="Select trade"></td>' +
         '<td><span class="lg-pill" style="--c:var(' + CC[i] + ')">' + CL[i] + '</span></td>' +
         '<td><a href="comicDetails?ComicID=' + t.cid + '">' + esc(t.name) + '</a> <span class="lg-dim">(' + esc(t.year) + ') #' + esc(t.num) + '</span><br><small class="lg-dim">' + esc(t.type) + ' · ' + esc(t.pub) + '</small></td>' +
-        '<td class="lg-dim lg-title-cell">' + (esc(t.collects) || '—') + '</td>' +
+        '<td class="lg-dim lg-title-cell">' + (esc(t.collects) || '—') + (t.extras && t.extras.length ? '<br><small>Tie-ins not tracked: ' + esc(t.extras.join(', ')) + '</small>' : '') + '</td>' +
         '<td class="num lg-mono">' + (t.found ? t.own + ' / ' + t.found : '—') + (t.unresolved ? '<br><small class="lg-dim">+' + t.unresolved + ' not tracked</small>' : '') + '</td>' +
         '<td class="num lg-mono">' + (t.lacking.length ? '<button class="lg-link" data-open="' + t.iid + '" aria-expanded="' + !!open + '">' + t.lacking.length + '</button>' : '') + '</td>' +
         '<td><span class="lg-status lg-st-' + esc(t.tstatus) + '">' + esc(t.tstatus) + '</span></td></tr>';
       if (open) row += '<tr class="lg-sub-row"><td></td><td colspan="6">' + t.lacking.map(function (l) { return '<span class="lg-chip">' + esc(l[1]) + ' (' + esc(l[2]) + ') #' + esc(l[3]) + ' <em>' + esc(l[4]) + '</em></span>'; }).join('') + '</td></tr>';
       return row;
-    }).join('') : '<tr><td class="lg-empty" colspan="7">' + (C.trades.length ? 'No editions match these filters.' : 'Trade contents haven\'t been read yet. Use the button above.') + '</td></tr>');
-    $id('lg-count').textContent = fmt(Math.min(st.limit, f.length)) + ' of ' + fmt(f.length) + ' editions';
+    }).join('') : '<tr><td class="lg-empty" colspan="7">' + (C.trades.length ? 'No trades match these filters.' : 'Trade contents haven\'t been read yet. Use the button above.') + '</td></tr>');
+    $id('lg-count').textContent = fmt(Math.min(st.limit, f.length)) + ' of ' + fmt(f.length) + ' trades';
     $id('lg-more').hidden = f.length <= st.limit;
-    $id('lg-note').textContent = 'Contents come from each edition\'s ComicVine description and, when a Metron token is set, Metron\'s reprint list. Editions neither source describes can\'t be checked. "Ignore issues it covers" marks the singles you don\'t have as Ignored, since you own them in this edition.';
+    $id('lg-note').textContent = 'Contents come from each trade\'s ComicVine description and, when a Metron token is set, Metron\'s reprint list. Trades neither source describes can\'t be checked. "Ignore issues it covers" marks the singles you don\'t have as Ignored, since you own them in this trade.';
   }
 
   $('#lg-table').on('click', '[data-open]', function () { var k = this.getAttribute('data-open'); st.open[k] = !st.open[k]; render(); });
@@ -208,7 +241,7 @@
   function selBar() {
     var n = Object.keys(st.sel).length;
     $id('lg-actions').hidden = n === 0;
-    $id('lg-selcount').textContent = fmt(n) + (st.tab === 'missing' ? ' issues selected' : ' editions selected');
+    $id('lg-selcount').textContent = fmt(n) + (st.tab === 'missing' ? ' issues selected' : ' trades selected');
     var ig = $id('lg-ignore-covered');
     if (st.tab === 'collected' && !ig) $('#lg-clear').before('<button class="lg-btn" id="lg-ignore-covered">Ignore issues it covers</button>');
     if (st.tab !== 'collected' && ig) $(ig).remove();
@@ -241,14 +274,14 @@
     s = s || (C && C.build) || {};
     $id('lg-build').hidden = false;
     var t;
-    if (s.running) t = (s.phase || 'Working') + ': ' + fmt(s.done) + ' of ' + fmt(s.total) + ' editions';
+    if (s.running) t = (s.phase || 'Working') + ': ' + fmt(s.done) + ' of ' + fmt(s.total) + ' trades';
     else if (s.error) t = 'Last read failed: ' + s.error;
-    else if (s.stored) t = fmt(s.stored) + ' editions read, last on ' + s.updated + '. Sources: ComicVine' + (s.metron ? ' and Metron (' + fmt(s.metron_found || 0) + ' explained by Metron).' : '. Add a Metron API token in Settings to check more editions.');
+    else if (s.stored) t = fmt(s.stored) + ' trades read, last on ' + s.updated + '. Sources: ComicVine' + (s.metron ? ' and Metron (' + fmt(s.metron_found || 0) + ' explained by Metron).' : '. Add a Metron API token in Settings to check more trades.');
     else t = 'Trade contents haven\'t been read yet.';
     if (!s.running && s.note) t += ' ' + s.note;
     $id('lg-build-text').textContent = t;
     $('#lg-build-btn, #lg-rebuild-btn').prop('disabled', !!s.running);
-    $id('lg-build-btn').textContent = s.stored ? 'Read new editions' : 'Read trade contents';
+    $id('lg-build-btn').textContent = s.stored ? 'Read new trades' : 'Read trade contents';
     if (s.running && !poll) poll = setInterval(function () {
       $.getJSON('ledger_status', function (x) {
         buildBar(x);

@@ -1,7 +1,10 @@
 :root {
   --lg-gap: var(--t-want, #c4186f); --lg-unrec: var(--t-snatch, #b98200); --lg-after: var(--t-arch, #0a7fb0);
   --lg-before: var(--t-skip, #6b7682); --lg-cut: var(--t-skip, #6b7682); --lg-done: var(--t-ok, #3d7a4a);
+  --lg-plus: #2b8a7e;
 }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --lg-plus: #4fc4b4; } }
+:root[data-theme="dark"] { --lg-plus: #4fc4b4; }
 .lg { width: 100%; box-sizing: border-box; clear: both; display: flex; flex-direction: column; gap: 16px; padding-block: 8px 32px; line-height: 1.45; }
 .lg-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; border-bottom: 3px solid var(--t-fg); padding-bottom: 10px; }
 .lg-title { font-family: var(--t-display); font-weight: 800; font-size: clamp(32px, 4.5vw, 46px); line-height: .95; margin: 0; text-transform: uppercase; }
@@ -59,3 +62,11 @@
 @media (max-width: 560px) { .lg-count { margin-left: 0; width: 100%; } }
 .lg [hidden] { display: none !important; }
 .lg-mono { white-space: nowrap; }
+.lg-trades { min-width: 150px; max-width: 230px; }
+.lg .lg-trade { display: inline-flex; align-items: center; gap: 5px; margin: 1px 6px 1px 0; padding: 2px 8px 2px 6px; border-radius: 4px; font-size: 12px; font-weight: 600; color: var(--c) !important; background: color-mix(in srgb, var(--c) 12%, transparent); text-decoration: none; max-width: 220px; line-height: 1.3; }
+.lg .lg-trade span { overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.lg-ico { width: 15px; height: 15px; flex: none; fill: color-mix(in srgb, currentColor 25%, transparent); stroke: currentColor; stroke-width: 1.3; stroke-linejoin: round; }
+.lg .lg-trade-out { --c: var(--t-muted); background: none; border: 1px dashed var(--t-line); font-weight: 500; }
+.lg-trade-out .lg-ico { fill: none; }
+.lg-table tr.lg-complete td { background: color-mix(in srgb, var(--lg-done) 9%, var(--t-surface)); }
+.lg-table tr.lg-complete td:first-child { box-shadow: inset 4px 0 0 var(--lg-done); }

@@ -306,6 +306,50 @@ def _metron_pass(myDB, lib, token, force):
         _status['done'] = n
 
 
+COVERAGE = ['fills_gaps', 'covered', 'dup_plus', 'partly', 'not_in_library', 'unknown']
+
+
+def _norm(name):
+    return re.sub(r'[^a-z0-9]+', '', (name or '').lower().replace('&', 'and'))
+
+
+def _trades(myDB, status, comics):
+    _ensure_table(myDB)
+    out = []
+    for r in myDB.select('SELECT * FROM ledger_collects'):
+        t = status.get(r['TradeIssueID'])
+        c = comics.get(r['TradeComicID'])
+        if t is None or c is None:
+            continue
+        found = [f for f in json.loads(r['IssueIDs'] or '[]') if f in status and status[f]['ComicID'] in comics]
+        unresolved = json.loads(r['Unresolved'] or '[]')
+        own = [f for f in found if status[f]['Status'] in OWNED]
+        found_names = {_norm(comics[status[f]['ComicID']]['ComicName']) for f in found}
+        same = [u for u in unresolved if _norm(u.get('series')) in found_names]
+        other = [u for u in unresolved if _norm(u.get('series')) not in found_names]
+        if not r['Collects']:
+            cov = 'unknown'
+        elif not found:
+            cov = 'not_in_library' if unresolved else 'unknown'
+        elif len(own) < len(found):
+            cov = 'fills_gaps'
+        elif not unresolved:
+            cov = 'covered'
+        elif same:
+            cov = 'partly'
+        else:
+            cov = 'dup_plus'
+        out.append({'row': r, 'trade': t, 'comic': c, 'found': found, 'own': own, 'unresolved': unresolved,
+                    'other': other, 'coverage': cov})
+    return out
+
+
+def _lookups(myDB):
+    status = {r['IssueID']: r for r in myDB.select('SELECT IssueID, ComicID, Issue_Number, Status FROM issues')}
+    comics = {r['ComicID']: r for r in myDB.select('SELECT ComicID, ComicName, ComicYear, ComicPublisher, Corrected_Type, Type, Have, Total FROM comics')}
+    return status, comics
+
+
 def missing_data(cutoff=None):
     myDB = db.DBConnection()
     comics = {r['ComicID']: r for r in myDB.select('SELECT ComicID, ComicName, ComicYear, ComicPublisher, Have, Total FROM comics')}
@@ -319,7 +363,32 @@ def missing_data(cutoff=None):
             rows.append(i)
     lo = {c: min(v) for c, v in owned.items()}
     hi = {c: max(v) for c, v in owned.items()}
+
+    status, tcomics = _lookups(myDB)
+    trades, by_issue, by_series = [], defaultdict(list), defaultdict(list)
+    for x in _trades(myDB, status, tcomics):
+        idx = len(trades)
+        cids = sorted({status[f]['ComicID'] for f in x['found']})
+        trades.append([x['comic']['ComicName'], x['comic']['ComicYear'], x['trade']['Issue_Number'], x['row']['TradeComicID'],
+                       1 if x['trade']['Status'] in OWNED else 0, COVERAGE.index(x['coverage'])])
+        for f in x['found']:
+            by_issue[f].append(idx)
+        for cid in cids:
+            by_series[cid].append(idx)
+
     pubs, pidx, series, sidx, out = [], {}, [], {}, []
+
+    def series_index(cid):
+        c = comics[cid]
+        pub = c['ComicPublisher'] or '?'
+        if pub not in pidx:
+            pidx[pub] = len(pubs)
+            pubs.append(pub)
+        if cid not in sidx:
+            sidx[cid] = len(series)
+            series.append([c['ComicName'], c['ComicYear'], c['Have'] or 0, c['Total'] or 0, pidx[pub], cid, by_series.get(cid, [])])
+        return sidx[cid]
+
     for i in rows:
         c = comics.get(i['ComicID'])
         if c is None:
@@ -336,45 +405,37 @@ def missing_data(cutoff=None):
             kind = 3
         else:
             kind = 2
-        pub = c['ComicPublisher'] or '?'
-        if pub not in pidx:
-            pidx[pub] = len(pubs)
-            pubs.append(pub)
-        if i['ComicID'] not in sidx:
-            sidx[i['ComicID']] = len(series)
-            series.append([c['ComicName'], c['ComicYear'], c['Have'] or 0, c['Total'] or 0, pidx[pub], i['ComicID']])
-        out.append([kind, sidx[i['ComicID']], i['Issue_Number'] or '', n or 0, (i['IssueName'] or '')[:90], date, i['IssueID'], i['Status']])
-    return {'kinds': KINDS, 'pubs': pubs, 'series': series, 'rows': out, 'cutoff': cutoff or ''}
+        out.append([kind, series_index(i['ComicID']), i['Issue_Number'] or '', n or 0, (i['IssueName'] or '')[:90], date, i['IssueID'], i['Status'],
+                    by_issue.get(i['IssueID'], [])])
+    missing_cids = {i['ComicID'] for i in rows}
+    complete = [series_index(cid) for cid, c in comics.items()
+                if cid not in missing_cids and (c['Total'] or 0) > 0 and (c['Have'] or 0) >= (c['Total'] or 0)]
+    return {'kinds': KINDS, 'pubs': pubs, 'series': series, 'rows': out, 'cutoff': cutoff or '',
+            'trades': trades, 'coverage': COVERAGE, 'complete': complete}
+
+
+def _extra_name(u, found, status, comics):
+    name = u.get('series') or ''
+    if _norm(name) in ('annual', 'annuals') and found:
+        name = '%s Annual' % comics[status[found[0]]['ComicID']]['ComicName']
+    elif name.isupper():
+        name = name.title()
+    return '%s (%s)' % (name, u['year']) if u.get('year') else name
 
 
 def collected_data():
     myDB = db.DBConnection()
-    _ensure_table(myDB)
-    status = {r['IssueID']: r for r in myDB.select('SELECT IssueID, ComicID, Issue_Number, Status FROM issues')}
-    comics = {r['ComicID']: r for r in myDB.select('SELECT ComicID, ComicName, ComicYear, ComicPublisher, Corrected_Type, Type FROM comics')}
+    status, comics = _lookups(myDB)
     out = []
-    for r in myDB.select('SELECT * FROM ledger_collects'):
-        t = status.get(r['TradeIssueID'])
-        c = comics.get(r['TradeComicID'])
-        if t is None or c is None:
-            continue
-        found = [f for f in json.loads(r['IssueIDs'] or '[]') if f in status]
-        unresolved = json.loads(r['Unresolved'] or '[]')
-        own = [f for f in found if status[f]['Status'] in OWNED]
-        if not r['Collects']:
-            cov = 'unknown'
-        elif not found:
-            cov = 'not_in_library' if unresolved else 'unknown'
-        elif len(own) == len(found):
-            cov = 'covered' if not unresolved else 'partly'
-        else:
-            cov = 'fills_gaps'
+    for x in _trades(myDB, status, comics):
+        r, t, c = x['row'], x['trade'], x['comic']
         lacking = [[f, comics[status[f]['ComicID']]['ComicName'], comics[status[f]['ComicID']]['ComicYear'], status[f]['Issue_Number'], status[f]['Status']]
-                   for f in found if f not in own and status[f]['ComicID'] in comics]
+                   for f in x['found'] if f not in x['own']]
         out.append({'iid': r['TradeIssueID'], 'cid': r['TradeComicID'], 'name': c['ComicName'], 'year': c['ComicYear'],
                     'pub': c['ComicPublisher'], 'type': c['Corrected_Type'] or c['Type'], 'num': t['Issue_Number'],
-                    'tstatus': t['Status'], 'collects': r['Collects'] or '', 'found': len(found), 'own': len(own),
-                    'unresolved': sum(len(u['nums']) for u in unresolved), 'lacking': lacking, 'coverage': cov})
+                    'tstatus': t['Status'], 'collects': r['Collects'] or '', 'found': len(x['found']), 'own': len(x['own']),
+                    'unresolved': sum(len(u['nums']) for u in x['unresolved']), 'lacking': lacking, 'coverage': x['coverage'],
+                    'extras': sorted({_extra_name(u, x['found'], status, comics) for u in x['other']})})
     return {'trades': out, 'build': status_summary(myDB)}
 
 
