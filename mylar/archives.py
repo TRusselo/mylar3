@@ -28,6 +28,26 @@ def done(fallback='Nothing to do.'):
     ACTIVITY.update(state='Idle', detail='', last='; '.join(ACTIVITY['notes']) or fallback, last_at=time.time(), notes=[])
 
 
+def processing():
+    from mylar import autoadd
+    try:
+        queued = mylar.PP_QUEUE is not None and mylar.PP_QUEUE.qsize() > 0
+    except Exception:
+        queued = False
+    return ACTIVITY['state'] == 'Working' or autoadd.running() or queued
+
+
+def wait_idle(label, limit=1800):
+    if not processing():
+        return
+    logger.info('%s Waiting for post-processing to finish before searching, so issues already downloaded aren\'t grabbed again.' % label)
+    end = time.time() + limit
+    while processing() and time.time() < end:
+        time.sleep(10)
+    if processing():
+        logger.info('%s Post-processing is still running after %s minutes - searching anyway.' % (label, limit // 60))
+
+
 def snapshot():
     return {k: v for k, v in ACTIVITY.items() if k != 'notes'}
 MIN_PAGES = 3

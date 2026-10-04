@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 
 import mylar
-from .. import logger, helpers
+from .. import logger, helpers, archives
 
 
 def search_queue(queue):
@@ -13,6 +13,7 @@ def search_queue(queue):
             time.sleep(5)
 
         elif mylar.SEARCHLOCK is False and queue.qsize() >= 1:
+            archives.wait_idle('[SEARCH-QUEUE]')
             item = queue.get(True)
             if item == 'exit':
                 logger.info('[SEARCH-QUEUE] Cleaning up workers for shutdown')

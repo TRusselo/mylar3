@@ -40,6 +40,10 @@ def _save(reg):
         logger.warn('[AUTO-ADD] Unable to save the attempt list: %s' % e)
 
 
+def running():
+    return _running.is_set()
+
+
 def attempted(path):
     return path in _load()
 
@@ -194,7 +198,11 @@ def _run(paths):
                 archives.note('added %s series: %s' % (len(added), ', '.join(sorted(set(added)))))
             if unknown:
                 archives.note('could not identify %s series' % len(set(unknown)))
-            logger.info('[AUTO-ADD] Added %s series; %s could not be identified. The next folder monitor pass files their issues.' % (len(added), len(set(unknown))))
+            logger.info('[AUTO-ADD] Added %s series; %s could not be identified.' % (len(added), len(set(unknown))))
+            if added and mylar.CONFIG.CHECK_FOLDER:
+                logger.info('[AUTO-ADD] Filing the issues of the new series now.')
+                mylar.PP_QUEUE.put({'nzb_name': 'Manual Run', 'nzb_folder': mylar.CONFIG.CHECK_FOLDER, 'failed': False, 'issueid': None,
+                                    'comicid': None, 'apicall': False, 'ddl': False, 'download_info': None})
             archives.done('Auto-add finished.')
         finally:
             _running.clear()
