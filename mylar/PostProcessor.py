@@ -369,6 +369,18 @@ class PostProcessor(object):
 
 
     def Process(self):
+        self.extracted = []
+        started = time.time()
+        source, source_name = self.nzb_folder, self.nzb_name
+        try:
+            return self._process_main()
+        finally:
+            archives.cleanup(self.extracted)
+            if source_name == 'Manual Run' and mylar.CONFIG.CHECK_FOLDER and source and \
+                    os.path.normpath(source) == os.path.normpath(mylar.CONFIG.CHECK_FOLDER):
+                archives.sweep(source, started)
+
+    def _process_main(self):
             module = self.module
             self._log('nzb name: %s' % self.nzb_name)
             self._log('nzb folder: %s' % self.nzb_folder)
@@ -421,14 +433,16 @@ class PostProcessor(object):
             else:
                 logger.fdebug('%s Now performing post-processing of %s sent from DDL' % (module, self.nzb_name))
 
-            unpacked = archives.prepare(self.nzb_folder)
+            unpacked, self.extracted = archives.prepare(self.nzb_folder)
             if unpacked:
                 kind, newpath = unpacked
                 self.nzb_folder = newpath
                 self.nzb_name = os.path.basename(newpath)
                 if kind == 'pack':
-                    logger.info('%s Post-processing the comics extracted from the archive in %s' % (module, newpath))
+                    logger.info('%s Post-processing the comics extracted from %s against the whole watchlist' % (module, newpath))
+                    self.nzb_name = 'Manual Run'
                     self.issueid = None
+                    self.comicid = None
 
             myDB = db.DBConnection()
 

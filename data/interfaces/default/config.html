@@ -1300,6 +1300,18 @@
                                     <div class="row checkbox left clearfix">
                                         <input type="checkbox" name="archive_delete" value="1" ${config['archive_delete']} /><label>Delete .zip/.rar downloads after extracting the comics in them</label>
                                     </div>
+                                    <div class="row">
+                                        <label>Comics nothing on the watchlist wants (packs and the monitored folder)</label>
+                                        <select name="archive_leftovers">
+                                            <option value="review" ${'selected' if config['archive_leftovers'] != 'delete' else ''}>Move to a review folder</option>
+                                            <option value="delete" ${'selected' if config['archive_leftovers'] == 'delete' else ''}>Delete them</option>
+                                        </select>
+                                    </div>
+                                    <div class="row">
+                                        <label>Review folder</label>
+                                        <input type="text" name="archive_review_dir" value="${config['archive_review_dir']}" placeholder="${config['archive_review_default']}" size="40">
+                                        <small>Leave empty to use ${config['archive_review_default']}. Keep it outside the monitored folder.</small>
+                                    </div>
                                     <br/>
                                     <div class="row checkbox left clearfix">
                                         <input type="checkbox" id="enable_check_folder" onclick="initConfigCheckbox($(this));" name="enable_check_folder" value="1" ${config['enable_check_folder']} /><label>Enable Folder Monitoring<small></label>

@@ -78,7 +78,7 @@ def unpack(path):
 
 
 def unpack_folder(folder):
-    done = 0
+    done = []
     now = time.time()
     for root, dirs, names in os.walk(folder):
         for name in names:
@@ -88,8 +88,9 @@ def unpack_folder(folder):
             try:
                 if now - os.path.getmtime(path) < SETTLE_SECONDS:
                     continue
-                if unpack(path):
-                    done += 1
+                res = unpack(path)
+                if res and res[0] == 'pack':
+                    done.append(res[1])
             except Exception as e:
                 logger.warn('[ARCHIVE] Unable to unpack %s: %s' % (path, e))
     return done
@@ -97,13 +98,94 @@ def unpack_folder(folder):
 
 def prepare(path):
     if not path:
-        return None
+        return None, []
     try:
         if os.path.isdir(path):
-            unpack_folder(path)
-            return None
+            return None, unpack_folder(path)
         if os.path.isfile(path) and path.lower().endswith(ARCHIVE_EXT):
-            return unpack(path)
+            res = unpack(path)
+            return res, ([res[1]] if res and res[0] == 'pack' else [])
     except Exception as e:
         logger.warn('[ARCHIVE] Unable to unpack %s: %s' % (path, e))
-    return None
+    return None, []
+
+
+def review_dir():
+    configured = getattr(mylar.CONFIG, 'ARCHIVE_REVIEW_DIR', None)
+    if configured and configured != 'None':
+        return configured
+    if mylar.CONFIG.CHECK_FOLDER:
+        return os.path.join(os.path.dirname(os.path.normpath(mylar.CONFIG.CHECK_FOLDER)), 'mylar-review')
+    return os.path.join(mylar.CONFIG.CACHE_DIR or '/config/mylar/cache', 'mylar-review')
+
+
+def _leftover_action():
+    return (getattr(mylar.CONFIG, 'ARCHIVE_LEFTOVERS', None) or 'review').lower()
+
+
+def _dispose(path, rel_dir):
+    if _leftover_action() == 'delete':
+        os.remove(path)
+        return 'deleted'
+    dest = os.path.join(review_dir(), rel_dir) if rel_dir else review_dir()
+    os.makedirs(dest, exist_ok=True)
+    target = os.path.join(dest, os.path.basename(path))
+    if os.path.exists(target):
+        base, ext = os.path.splitext(target)
+        target = '%s (%s)%s' % (base, int(time.time()), ext)
+    shutil.move(path, target)
+    return 'moved'
+
+
+def _moving():
+    return (getattr(mylar.CONFIG, 'FILE_OPTS', None) or 'move') == 'move'
+
+
+def cleanup(folders):
+    if not folders or not _moving():
+        return
+    for folder in folders:
+        if not os.path.isdir(folder):
+            continue
+        left = [os.path.join(r, n) for r, _, ns in os.walk(folder) for n in ns]
+        comics = [p for p in left if p.lower().endswith(COMIC_EXT)]
+        try:
+            for p in comics:
+                _dispose(p, os.path.basename(folder))
+            if comics:
+                logger.info('[ARCHIVE] %s %s issues from %s that nothing on the watchlist wanted%s' % (
+                    'Deleted' if _leftover_action() == 'delete' else 'Moved', len(comics), os.path.basename(folder),
+                    '' if _leftover_action() == 'delete' else ' to %s' % review_dir()))
+            shutil.rmtree(folder)
+        except Exception as e:
+            logger.warn('[ARCHIVE] Unable to clear %s: %s' % (folder, e))
+
+
+def sweep(folder, started):
+    if not folder or not os.path.isdir(folder) or not _moving():
+        return
+    cutoff = started - SETTLE_SECONDS
+    kept, junk = 0, 0
+    for root, dirs, names in os.walk(folder):
+        for name in names:
+            path = os.path.join(root, name)
+            try:
+                if os.path.getmtime(path) >= cutoff:
+                    continue
+                if name.lower().endswith(COMIC_EXT + ARCHIVE_EXT):
+                    _dispose(path, os.path.relpath(root, folder) if root != folder else '')
+                    kept += 1
+                else:
+                    os.remove(path)
+                    junk += 1
+            except Exception as e:
+                logger.warn('[FOLDER MONITOR] Unable to clear %s: %s' % (path, e))
+    for root, dirs, names in os.walk(folder, topdown=False):
+        if root != folder and not os.listdir(root):
+            try:
+                os.rmdir(root)
+            except Exception:
+                pass
+    if kept or junk:
+        logger.info('[FOLDER MONITOR] Cleared the monitored folder: %s unfiled comics %s, %s other files deleted.' % (
+            kept, 'deleted' if _leftover_action() == 'delete' else 'moved to %s' % review_dir(), junk))

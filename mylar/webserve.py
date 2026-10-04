@@ -54,6 +54,7 @@ from string import ascii_lowercase
 
 import mylar
 from mylar import (
+    archives,
     carepackage,
     config,
     db,
@@ -7180,6 +7181,9 @@ class WebInterface(object):
                     "annuals_on": helpers.checked(mylar.CONFIG.ANNUALS_ON),
                     "enable_check_folder": helpers.checked(mylar.CONFIG.ENABLE_CHECK_FOLDER),
                     "archive_delete": helpers.checked(mylar.CONFIG.ARCHIVE_DELETE),
+                    "archive_leftovers": mylar.CONFIG.ARCHIVE_LEFTOVERS or 'review',
+                    "archive_review_dir": mylar.CONFIG.ARCHIVE_REVIEW_DIR or '',
+                    "archive_review_default": archives.review_dir(),
                     "check_folder": mylar.CONFIG.CHECK_FOLDER,
                     "download_scan_interval": mylar.CONFIG.DOWNLOAD_SCAN_INTERVAL,
                     "search_interval": mylar.CONFIG.SEARCH_INTERVAL,
