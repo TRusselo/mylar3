@@ -11,7 +11,7 @@
 
   var st = {
     tab: 'missing', by: 'issue', kinds: { missing: [0], collected: [0, 1] }, q: '', pub: '', dec: '',
-    sort: null, limit: 300, sel: {}, open: {}, owned: true
+    sort: null, limit: 300, sel: {}, open: {}
   };
   try { var saved = JSON.parse(localStorage.getItem('mylar-ledger') || 'null'); if (saved) { st.tab = saved.tab || st.tab; st.kinds = saved.kinds || st.kinds; st.by = saved.by || st.by; } } catch (e) {}
   function save() { try { localStorage.setItem('mylar-ledger', JSON.stringify({ tab: st.tab, kinds: st.kinds, by: st.by })); } catch (e) {} }
@@ -32,7 +32,7 @@
     if (st.tab === 'missing') {
       counts = [0, 0, 0, 0, 0, M.complete.length]; M.rows.forEach(function (r) { counts[r[0]]++; }); L = ML; H = MH; K = MK;
     } else {
-      counts = [0, 0, 0, 0, 0]; C.trades.forEach(function (t) { if (!st.owned || isOwned(t)) counts[CK.indexOf(t.coverage)]++; }); L = CL; H = CH; K = CC;
+      counts = [0, 0, 0, 0, 0]; C.trades.forEach(function (t) { counts[CK.indexOf(t.coverage)]++; }); L = CL; H = CH; K = CC;
     }
     $id('lg-tiles').innerHTML = L.map(function (l, i) {
       if (st.tab === 'missing' && i === 4 && !M.cutoff) return '';
@@ -63,8 +63,6 @@
     $id('lg-dec').value = st.dec;
     $id('lg-dec').hidden = st.tab !== 'missing';
     $id('lg-cutoff-wrap').hidden = st.tab !== 'missing';
-    $id('lg-owned-wrap').hidden = st.tab !== 'collected';
-    $id('lg-owned').checked = st.owned;
     $id('lg-cutoff').value = (M && M.cutoff) || '';
     $('.lg-seg').toggle(st.tab === 'missing');
   }
@@ -73,7 +71,6 @@
   $('#lg-pub').on('change', function () { st.pub = this.value; st.limit = 300; render(); });
   $('#lg-dec').on('change', function () { st.dec = this.value; st.limit = 300; render(); });
   $('#lg-more').on('click', function () { st.limit += 300; render(); });
-  $('#lg-owned').on('change', function () { st.owned = this.checked; st.limit = 300; tiles(); render(); });
   $('#lg-cutoff').on('change', function () {
     $.getJSON('ledger_cutoff', { cutoff: this.value }, function (r) {
       if (!r.ok) { alert(r.error); return; }
@@ -200,7 +197,6 @@
     var keys = st.kinds.collected, s = st.sort || { key: 'cov', dir: 1 };
     var f = C.trades.filter(function (t) {
       if (keys.indexOf(CK.indexOf(t.coverage)) < 0) return false;
-      if (st.owned && !isOwned(t)) return false;
       if (st.pub && (t.pub || '?') !== st.pub) return false;
       if (st.q && (t.name + ' ' + t.collects).toLowerCase().indexOf(st.q) < 0) return false;
       return true;
@@ -322,7 +318,7 @@
     var t;
     if (s.running) t = (s.phase || 'Working') + ': ' + fmt(s.done) + ' of ' + fmt(s.total) + ' trades';
     else if (s.error) t = 'Last read failed: ' + s.error;
-    else if (s.stored) t = fmt(s.stored) + ' trades read, last on ' + s.updated + '. Sources: ComicVine' + (s.metron ? ' and Metron (' + fmt(s.metron_found || 0) + ' explained by Metron).' : '. Add a Metron API token in Settings to check more trades.');
+    else if (s.stored) t = fmt(s.stored) + ' trades read, last on ' + s.updated + '. Sources: ComicVine, the summaries in your trade files (' + fmt(s.comicinfo_found || 0) + ')' + (s.metron ? ' and Metron (' + fmt(s.metron_found || 0) + ').' : '.');
     else t = 'Trade contents haven\'t been read yet.';
     if (!s.running && s.note) t += ' ' + s.note;
     $id('lg-build-text').textContent = t;

@@ -6,6 +6,8 @@ import json
 import re
 import threading
 import time
+import zipfile
+import xml.etree.ElementTree as ET
 
 import requests
 from collections import defaultdict
@@ -234,7 +236,7 @@ def _build(force):
         _ensure_table(myDB)
         trades = myDB.select("SELECT i.IssueID, i.ComicID, c.ComicName FROM issues i JOIN comics c ON c.ComicID=i.ComicID "
                              "WHERE coalesce(c.Corrected_Type, c.Type) IN ('TPB','HC','GN')")
-        done = set() if force else {r['TradeIssueID'] for r in myDB.select("SELECT TradeIssueID FROM ledger_collects WHERE Source='comicvine'")}
+        done = set() if force else {r['TradeIssueID'] for r in myDB.select("SELECT TradeIssueID FROM ledger_collects")}
         todo = [t for t in trades if t['IssueID'] not in done]
         _status.update(total=len(todo), phase='Reading ComicVine descriptions')
         lib = _Library(myDB)
@@ -259,6 +261,7 @@ def _build(force):
                                                 'IssueIDs': json.dumps(found), 'Unresolved': json.dumps(missing), 'Updated': now},
                             {'TradeIssueID': t['IssueID']})
             _status['done'] = min(len(todo), k + 100)
+        _comicinfo_pass(myDB, lib, force)
         token = metron_token()
         metron_note = None
         if token:
@@ -274,6 +277,54 @@ def _build(force):
         _status.update(error=str(e), phase='Failed')
     finally:
         _status.update(running=False, finished=datetime.datetime.now().strftime('%Y-%m-%d %H:%M'))
+
+
+def _comicinfo_summary(path):
+    try:
+        with zipfile.ZipFile(path) as z:
+            name = next((n for n in z.namelist() if n.lower().rsplit('/', 1)[-1] == 'comicinfo.xml'), None)
+            if not name:
+                return None
+            root = ET.fromstring(z.read(name))
+    except Exception:
+        return None
+    node = root.find('Summary')
+    return node.text if node is not None and node.text else None
+
+
+def _comicinfo_pass(myDB, lib, force):
+    known = {r['TradeIssueID']: r for r in myDB.select('SELECT TradeIssueID, Source, IssueIDs FROM ledger_collects')}
+    rows = myDB.select("SELECT i.IssueID, i.ComicID, i.Location, i.ReleaseDate, c.ComicName, c.ComicLocation FROM issues i "
+                       "JOIN comics c ON c.ComicID=i.ComicID WHERE coalesce(c.Corrected_Type, c.Type) IN ('TPB','HC','GN') "
+                       "AND i.Status IN ('Downloaded','Archived') AND i.Location IS NOT NULL")
+    todo = []
+    for t in rows:
+        k = known.get(t['IssueID'])
+        if k is not None and k['IssueIDs'] not in (None, '[]') and not (force and k['Source'] == 'comicinfo'):
+            continue
+        todo.append(t)
+    _status.update(phase='Reading summaries in your trade files', done=0, total=len(todo))
+    found_n = 0
+    for n, t in enumerate(todo, 1):
+        _status['done'] = n
+        path = os.path.join(t['ComicLocation'] or '', t['Location'])
+        if not path.lower().endswith(('.cbz', '.zip')) or not os.path.isfile(path):
+            continue
+        text = _comicinfo_summary(path)
+        segs = parse_collects(text) if text else []
+        if not segs:
+            continue
+        found, missing = lib.resolve(segs, t['ComicName'], t['ReleaseDate'] or None, t['ComicID'])
+        if not found and t['IssueID'] in known:
+            continue
+        clause = _clauses(_clean(text))
+        myDB.upsert('ledger_collects', {'TradeComicID': t['ComicID'], 'Source': 'comicinfo',
+                                        'Collects': clause[0][:400] if clause else None,
+                                        'IssueIDs': json.dumps(found), 'Unresolved': json.dumps(missing),
+                                        'Updated': datetime.datetime.now().strftime('%Y-%m-%d %H:%M')},
+                    {'TradeIssueID': t['IssueID']})
+        found_n += 1 if found else 0
+    logger.info('[LEDGER] Trade file summaries explained %s trades ComicVine couldn\'t.' % found_n)
 
 
 def _metron_pass(myDB, lib, token, force):
@@ -446,7 +497,8 @@ def status_summary(myDB=None):
     row = myDB.selectone('SELECT count(*), max(Updated) FROM ledger_collects').fetchone()
     s = status()
     s.update(stored=row[0], updated=row[1], metron=bool(metron_token()),
-             metron_found=myDB.selectone("SELECT count(*) FROM ledger_collects WHERE Source='metron'").fetchone()[0])
+             metron_found=myDB.selectone("SELECT count(*) FROM ledger_collects WHERE Source='metron'").fetchone()[0],
+             comicinfo_found=myDB.selectone("SELECT count(*) FROM ledger_collects WHERE Source='comicinfo'").fetchone()[0])
     return s
 
 
