@@ -40,6 +40,7 @@ _CONFIG_DEFINITIONS = OrderedDict({
     'DYNAMIC_UPDATE': (int, 'General', 0),
     'REFRESH_CACHE': (int, 'General', 7),
     'ANNUALS_ON': (bool, 'General', False),
+    'LEDGER_CUTOFF': (str, 'General', ''),
     'SYNO_FIX': (bool, 'General', False),
     'LAUNCH_BROWSER' : (bool, 'General', False),
     'WANTED_TAB_OFF': (bool, 'General', False),

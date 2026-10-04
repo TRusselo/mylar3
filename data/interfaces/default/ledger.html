@@ -1,0 +1,71 @@
+<%inherit file="base.html"/>
+<%!
+    import mylar
+%>
+
+<%def name="headerIncludes()">
+	<div id="subhead_container">
+		<div id="subhead_menu">
+			<a id="menu_link_refresh" href="upcoming">Wanted list</a>
+			<a id="menu_link_refresh" href="history">History</a>
+		</div>
+	</div>
+</%def>
+
+<%def name="headIncludes()">
+	<link rel="stylesheet" type="text/css" href="css/ledger.css?v=${mylar.CURRENT_VERSION}" />
+</%def>
+
+<%def name="body()">
+<div class="lg">
+	<div class="lg-head">
+		<div>
+			<h1 class="lg-title">Ledger</h1>
+			<p class="lg-sub" id="lg-sub">Issues in your watched series that have no file, and the collected editions you own.</p>
+		</div>
+		<div class="lg-tabs" role="tablist" aria-label="Ledger view">
+			<button role="tab" id="lg-tab-missing" aria-selected="true">Missing issues</button>
+			<button role="tab" id="lg-tab-collected" aria-selected="false">Collected editions</button>
+		</div>
+	</div>
+
+	<div class="lg-tiles" id="lg-tiles" role="group" aria-label="Filter by kind"></div>
+
+	<div class="lg-controls">
+		<div class="lg-seg" role="group" aria-label="Group by">
+			<button id="lg-by-issue" aria-pressed="true">Issues</button>
+			<button id="lg-by-series" aria-pressed="false">By series</button>
+		</div>
+		<input id="lg-q" type="search" placeholder="Search series or title" aria-label="Search series or title">
+		<select id="lg-pub" aria-label="Publisher"></select>
+		<select id="lg-dec" aria-label="Release decade"></select>
+		<label class="lg-cutoff" id="lg-owned-wrap"><input id="lg-owned" type="checkbox" checked> Only editions I have</label>
+		<label class="lg-cutoff" id="lg-cutoff-wrap">Collection ended
+			<input id="lg-cutoff" type="date" aria-label="Date your collection stopped">
+		</label>
+		<span class="lg-count" id="lg-count"></span>
+	</div>
+
+	<div class="lg-build" id="lg-build" hidden>
+		<span id="lg-build-text"></span>
+		<button id="lg-build-btn" class="lg-btn">Read trade contents from ComicVine</button>
+		<button id="lg-rebuild-btn" class="lg-btn lg-quiet">Re-read all</button>
+	</div>
+
+	<div class="lg-actions" id="lg-actions" hidden>
+		<span id="lg-selcount"></span>
+		<button class="lg-btn" data-action="Wanted">Mark Wanted</button>
+		<button class="lg-btn" data-action="Skipped">Mark Skipped</button>
+		<button class="lg-btn" data-action="Ignored">Mark Ignored</button>
+		<button class="lg-btn lg-quiet" id="lg-clear">Clear selection</button>
+	</div>
+
+	<div class="lg-tablebox"><table class="lg-table" id="lg-table"><thead></thead><tbody></tbody></table></div>
+	<div class="lg-more"><button class="lg-btn lg-quiet" id="lg-more" hidden>Show 300 more</button></div>
+	<p class="lg-note" id="lg-note"></p>
+</div>
+</%def>
+
+<%def name="javascriptIncludes()">
+<script src="js/ledger.js?v=${mylar.CURRENT_VERSION}"></script>
+</%def>

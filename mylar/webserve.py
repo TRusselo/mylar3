@@ -62,6 +62,7 @@ from mylar import (
     helpers,
     importer,
     importstatus,
+    ledger,
     librarysync,
     logger,
     mb,
@@ -4675,6 +4676,38 @@ class WebInterface(object):
         from mylar import versioncheck
         cc_json = versioncheck.checkGithub()
     checkGithub.exposed = True
+
+    def ledger(self):
+        return serve_template(templatename="ledger.html", title="Ledger")
+    ledger.exposed = True
+
+    def ledger_data(self, view='missing', **kwargs):
+        cherrypy.response.headers['Content-Type'] = 'application/json'
+        if view == 'collected':
+            return json.dumps(ledger.collected_data())
+        return json.dumps(ledger.missing_data(mylar.CONFIG.LEDGER_CUTOFF or None))
+    ledger_data.exposed = True
+
+    def ledger_build(self, force=0, **kwargs):
+        cherrypy.response.headers['Content-Type'] = 'application/json'
+        started = ledger.start_build(force=helpers.str_to_bool(force))
+        return json.dumps({'started': started, 'status': ledger.status_summary()})
+    ledger_build.exposed = True
+
+    def ledger_status(self, **kwargs):
+        cherrypy.response.headers['Content-Type'] = 'application/json'
+        return json.dumps(ledger.status_summary())
+    ledger_status.exposed = True
+
+    def ledger_cutoff(self, cutoff='', **kwargs):
+        cherrypy.response.headers['Content-Type'] = 'application/json'
+        cutoff = cutoff.strip()
+        if cutoff and not re.match(r'^\d{4}-\d{2}-\d{2}$', cutoff):
+            return json.dumps({'ok': False, 'error': 'Use the format YYYY-MM-DD.'})
+        mylar.CONFIG.LEDGER_CUTOFF = cutoff
+        mylar.CONFIG.writeconfig(values={'ledger_cutoff': cutoff})
+        return json.dumps({'ok': True, 'cutoff': cutoff})
+    ledger_cutoff.exposed = True
 
     def history(self):
         return serve_template(templatename="history.html", title="History")
