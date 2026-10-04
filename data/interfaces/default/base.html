@@ -153,6 +153,9 @@
                                         ${prov}:${st_image} &nbsp
                                     %endfor
                                 %endif
+                                %if mylar.CONFIG.ENABLE_DDL:
+                                    <br><span id="pd_usage" title="Pixeldrain transfer used in the last day"></span>
+                                %endif
                         </div>
                         <div id="config_messages_dialog" title="configuration checks / warnings" style="display:none">
                            <span id="mbody"></span>
@@ -203,6 +206,7 @@
 	%>
 	<script>var importStatusInitial = ${_ist};</script>
 	<script src="js/importstatus.js?v=${mylar.CURRENT_VERSION}"></script>
+	<script src="js/trusselo.js?v=${mylar.CURRENT_VERSION}"></script>
 	<!--[if lt IE 7 ]>
 	<script src="js/libs/dd_belatedpng.js"></script>
 	<script> DD_belatedPNG.fix('img, .png_bg');</script>

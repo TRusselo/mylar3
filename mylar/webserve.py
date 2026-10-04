@@ -62,6 +62,7 @@ from mylar import (
     helpers,
     importer,
     importstatus,
+    ddlsources,
     ledger,
     librarysync,
     logger,
@@ -4699,6 +4700,12 @@ class WebInterface(object):
         return json.dumps(ledger.status_summary())
     ledger_status.exposed = True
 
+    def pixeldrain_status(self, key='', force=0, **kwargs):
+        cherrypy.response.headers['Content-Type'] = 'application/json'
+        key = (key or '').strip() or None
+        return json.dumps(ddlsources.pixeldrain_status(force=helpers.str_to_bool(force), key=key))
+    pixeldrain_status.exposed = True
+
     def metron_test(self, token='', **kwargs):
         cherrypy.response.headers['Content-Type'] = 'application/json'
         return json.dumps(ledger.metron_test(token))
@@ -7140,6 +7147,9 @@ class WebInterface(object):
                     "comicvine_api": mylar.CONFIG.COMICVINE_API,
                     "metron_api_token": mylar.CONFIG.METRON_API_TOKEN if mylar.CONFIG.METRON_API_TOKEN not in (None, 'None') else '',
                     "metron_env": bool(os.environ.get('METRON_API_TOKEN')),
+                    "ddl_sources_json": json.dumps(ddlsources.all_sources()),
+                    "pixeldrain_api_key": mylar.CONFIG.PIXELDRAIN_API_KEY if mylar.CONFIG.PIXELDRAIN_API_KEY not in (None, 'None') else '',
+                    "pixeldrain_env": bool(os.environ.get('PIXELDRAIN_API_KEY')),
                     "comicvine_url": mylar.CONFIG.COMICVINE_URL,
                     "http_host": mylar.CONFIG.HTTP_HOST,
                     "http_user": mylar.CONFIG.HTTP_USERNAME,

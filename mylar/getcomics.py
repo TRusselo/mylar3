@@ -30,7 +30,7 @@ import zipfile
 import json
 import mylar
 from operator import itemgetter
-from mylar import db, logger, helpers, search_filer
+from mylar import db, logger, helpers, search_filer, ddlsources
 from mylar.downloaders.jdownloader2 import JDownloader2
 
 class GC(object):
@@ -678,6 +678,13 @@ class GC(object):
             count_bees +=1
 
         #logger.fdebug('final valid_links: %s' % (valid_links))
+        ddlsources.record([a.get('site') for y in valid_links.values() for a in (y.get('links') or [])])
+        other_links = []
+        for k, y in valid_links.items():
+            for a in (y.get('links') or []):
+                src = ddlsources.canonical(a.get('site'))
+                if src and src not in ddlsources.BUILTIN and ddlsources.is_enabled(src) and a.get('links'):
+                    other_links.append(dict(a, source=src))
         tmp_links = []
         tmp_sites = []
         site_position = {}
@@ -686,6 +693,8 @@ class GC(object):
 
         for k,y in valid_links.items():
            for a in y['links']:
+               if not ddlsources.is_enabled(ddlsources.canonical(a['site'])):
+                   continue
                if k != 'normal':
                    # if it's HD-Upscaled / SD-Digital it needs to be handled differently than a straight DL link
                    if any([a['site'].lower() == 'download now', a['site'].lower() == 'mirror download']):
@@ -751,7 +760,11 @@ class GC(object):
         elif len(tmp_links) > 1:
             logger.info('Multiple available download options (%s) - checking configuration to see which to grab...' % (" ,".join(tmp_sites)))
             site_check = [y for x in link_types for y in tmp_sites if x in y]
-            for ddlp in mylar.CONFIG.DDL_PRIORITY_ORDER:
+            try:
+                _size_bytes = helpers.human2bytes(re.sub('/s', '', str(tmp_links[0].get('size') or '')).strip())
+            except Exception:
+                _size_bytes = None
+            for ddlp in ddlsources.order(_size_bytes):
                 force_title = False
                 site_lp = ddlp
                 logger.fdebug('priority ddl enabled - checking %s' % site_lp)
@@ -908,6 +921,11 @@ class GC(object):
                                series = link['series']
                            link_matched = True
 
+        elif other_links and self.jd2 is not None:
+            link = other_links[0]
+            series = link['series']
+            link_matched = True
+            logger.info('Only hosts that JD2 handles are available (%s) - sending to JD2.' % ', '.join(sorted({o['source'] for o in other_links})))
         else:
             logger.info('No valid items available that I am able to download from. Not downloading...')
             return {'success': False, 'links_exhausted': link_type_failure}
@@ -1134,7 +1152,11 @@ class GC(object):
                 jd2_priority_list = ["HIGHEST", "HIGH", "DEFAULT", "LOWEST"]
                 jd2_priority_map = {}
                 
-                for i, site in enumerate(mylar.CONFIG.DDL_PRIORITY_ORDER):
+                try:
+                    _jd2_size = helpers.human2bytes(re.sub('/s', '', str(x.get('size') or '')).strip())
+                except Exception:
+                    _jd2_size = None
+                for i, site in enumerate(ddlsources.order(_jd2_size)):
                     jd2_priority_map[site] = jd2_priority_list[i] if i < len(jd2_priority_list) else "LOWEST"
                     
                 if isinstance(tmp_links, list):
@@ -1146,13 +1168,12 @@ class GC(object):
                                 continue
                             jd2_priority_links[url] = jd2_priority_map.get(jd2_lt_site, 'DEFAULT')
 
-                main_entry = None
-                if len(links) == 1 and link_type not in ('GC-Main', 'GC-Mirror') and isinstance(tmp_links, list) and 'GC-Main' not in (link_type_failure or []):
-                    main_entry = next((e for e in tmp_links if isinstance(e, dict) and (e.get('site') or '').lower() in ('main server', 'download now', 'mirror download') and e.get('links')), None)
-                if main_entry is not None:
-                    queue_payload.update({'link': main_entry['links'], 'link_type': 'GC-Main'})
-                    link_type = 'GC-Main'
-                    myDB.upsert('ddl_info', {'link': main_entry['links'], 'link_type': 'GC-Main'}, ctrlval)
+                for entry in other_links:
+                    jd2_priority_links.setdefault(entry['links'], jd2_priority_map.get(entry['source'], 'LOWEST'))
+                if link_type not in ('GC-Main', 'GC-Mirror') and 'GC-Main' not in (link_type_failure or []) and ddlsources.is_enabled('main'):
+                    main_entry = next((e for e in (tmp_links or []) if isinstance(e, dict) and (e.get('site') or '').lower() in ('main server', 'download now', 'mirror download') and e.get('links')), None)
+                    if main_entry is not None:
+                        queue_payload['main_link'] = main_entry['links']
 
                 if link_type in ('GC-Main', 'GC-Mirror') or not jd2_priority_links:
                     mylar.DDL_QUEUE.put(queue_payload)

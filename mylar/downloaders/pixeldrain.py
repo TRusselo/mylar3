@@ -22,6 +22,7 @@ from pathlib import Path
 import urllib
 
 import mylar
+import mylar.ddlsources
 from mylar import db, helpers, logger, search, search_filer
 
 class PixelDrain(object):
@@ -33,6 +34,7 @@ class PixelDrain(object):
             'Referer': 'https://pixeldrain.com',
         }
         self.session = requests.Session()
+        self.session.headers.update(mylar.ddlsources.pixeldrain_auth_header())
 
         if mylar.CONFIG.ENABLE_PROXY:
             self.session.proxies.update({

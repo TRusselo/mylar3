@@ -91,3 +91,11 @@ footer a { color: var(--t-muted) !important; }
 .ajaxMsg, #ajaxMsg { background: var(--t-fg) !important; color: var(--t-bg) !important; border-radius: 4px; }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+.ddl-sources { margin: 8px 0 12px; }
+.ddl-src-list { list-style: none; margin: 6px 0; padding: 0; border: 1px solid var(--t-line); border-radius: 4px; max-width: 560px; }
+.ddl-src-list li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 8px; border-bottom: 1px solid var(--t-line); background: var(--t-surface); }
+.ddl-src-list li:last-child { border-bottom: 0; }
+.ddl-src-list button.ddl-up, .ddl-src-list button.ddl-down { padding: 0 6px !important; line-height: 20px; font-size: 11px !important; }
+.ddl-src-list button[disabled] { opacity: .35; }
+.ddl-src { margin: 0 !important; float: none !important; width: auto !important; font-weight: 600; color: var(--t-fg) !important; }
+.ddl-via { color: var(--t-muted); margin-left: auto; }

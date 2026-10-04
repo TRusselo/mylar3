@@ -42,6 +42,8 @@ _CONFIG_DEFINITIONS = OrderedDict({
     'ANNUALS_ON': (bool, 'General', False),
     'LEDGER_CUTOFF': (str, 'General', ''),
     'METRON_API_TOKEN': (str, 'Metron', None),
+    'DDL_DISABLED_SOURCES': (str, 'DDL', '[]'),
+    'PIXELDRAIN_API_KEY': (str, 'DDL', None),
     'SYNO_FIX': (bool, 'General', False),
     'LAUNCH_BROWSER' : (bool, 'General', False),
     'WANTED_TAB_OFF': (bool, 'General', False),
@@ -1661,12 +1663,7 @@ class Config(object):
                     logger.warn('[DDL PRIORITY ORDER] Unable to load DDL priority order from setting to default')
                     setattr(self, 'DDL_PRIORITY_ORDER', ["mega", "mediafire", "pixeldrain", "main"])
 
-            # validate entries
-            ddl_pros = ['mega', 'mediafire', 'pixeldrain', 'main']
-            for dpo in self.DDL_PRIORITY_ORDER:
-                if dpo.lower() not in ddl_pros:
-                    logger.warn('[DDL PRIORITY ORDER] Invalid value detected - removing %s' % dpo)
-                    self.DDL_PRIORITY_ORDER.pop(self.DDL_PRIORITY_ORDER.index(dpo))
+            self.DDL_PRIORITY_ORDER = [str(dpo).lower() for dpo in self.DDL_PRIORITY_ORDER if re.match(r'^[a-z0-9]+$', str(dpo).lower())]
 
         else:
             setattr(self, 'DDL_PRIORITY_ORDER', ["mega", "mediafire", "pixeldrain", "main"])  #default order

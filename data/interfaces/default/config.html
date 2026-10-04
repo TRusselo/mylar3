@@ -927,6 +927,23 @@
                                                </div>
                                            </div>
                                        </div>
+                                       <div class="ddl-sources" id="ddl_sources_box">
+                                           <label>Download sources, in the order to try them</label>
+                                           <ol id="ddl_sources_list" class="ddl-src-list"></ol>
+                                           <input type="hidden" name="ddl_priority_order" id="ddl_priority_order" value="">
+                                           <input type="hidden" name="ddl_disabled_sources" id="ddl_disabled_sources" value="">
+                                           <small>Sources a post doesn't offer are skipped. GetComics direct downloads go through Mylar and FlareSolverr; other hosts go to JD2 when it's enabled. New hosts GetComics adds appear here automatically.</small>
+                                       </div>
+                                       <div class="row">
+                                           <label>Pixeldrain API Key</label>
+                                           %if config['pixeldrain_env']:
+                                           <input type="password" id="pixeldrain_api_key" value="" placeholder="Set by the PIXELDRAIN_API_KEY environment variable" size="30" disabled>
+                                           %else:
+                                           <input type="password" autocomplete="off" name="pixeldrain_api_key" id="pixeldrain_api_key" value="${config['pixeldrain_api_key']}" placeholder="None (free daily limit)" size="30">
+                                           %endif
+                                           <input type="button" value="Test Pixeldrain" id="test_pixeldrain">
+                                           <small id="pixeldrain_status">Optional. Without a key Pixeldrain allows about 6 GB a day per connection.</small>
+                                       </div>
                                        <div class="row checkbox left clearfix">
                                             <input type="checkbox" id="jd2_enable" onclick="initConfigCheckbox($(this));" name="jd2_enable" value="1" ${config['jd2_enable']} /><label>Send to JDownloader2</label>
                                        </div>
@@ -2899,6 +2916,35 @@ $("#enable_airdcpp").click(function(){
                     $('#ajaxMsg').addClass('success').fadeIn().delay(3000).fadeOut();
                 });
 
+                (function () {
+                    var src = ${config['ddl_sources_json']};
+                    var list = $('#ddl_sources_list');
+                    function draw() {
+                        list.html(src.map(function (s, i) {
+                            return '<li data-i="' + i + '"><button type="button" class="ddl-up" aria-label="Move up"' + (i === 0 ? ' disabled' : '') + '>▲</button>' +
+                                '<button type="button" class="ddl-down" aria-label="Move down"' + (i === src.length - 1 ? ' disabled' : '') + '>▼</button>' +
+                                '<label class="ddl-src"><input type="checkbox" class="ddl-on"' + (s.enabled ? ' checked' : '') + '> ' + $('<span>').text(s.label).html() + '</label>' +
+                                '<small class="ddl-via">' + $('<span>').text(s.via).html() + (s.last_seen ? ' · last offered ' + s.last_seen.slice(0, 10) : ' · not seen yet') + '</small></li>';
+                        }).join(''));
+                        $('#ddl_priority_order').val(JSON.stringify(src.map(function (s) { return s.name; })));
+                        $('#ddl_disabled_sources').val(JSON.stringify(src.filter(function (s) { return !s.enabled; }).map(function (s) { return s.name; })));
+                    }
+                    list.on('click', '.ddl-up, .ddl-down', function () {
+                        var i = +$(this).closest('li').data('i'), j = $(this).hasClass('ddl-up') ? i - 1 : i + 1;
+                        var t = src[i]; src[i] = src[j]; src[j] = t; draw();
+                        list.find('li').eq(j).find($(this).hasClass('ddl-up') ? '.ddl-up' : '.ddl-down').focus();
+                    });
+                    list.on('change', '.ddl-on', function () { src[+$(this).closest('li').data('i')].enabled = this.checked; draw(); });
+                    draw();
+                    function gb(n) { return (n / 1e9).toFixed(2) + ' GB'; }
+                    $('#test_pixeldrain').click(function () {
+                        var box = $('#pixeldrain_status'); box.text('Checking…');
+                        $.getJSON('pixeldrain_status', { key: $('#pixeldrain_api_key').val() || '', force: 1 }, function (r) {
+                            var msg = r.ok ? ('Pixeldrain ' + (r.user ? 'account ' + r.user + (r.plan ? ' (' + r.plan + ')' : '') : 'free tier') + ': ' + gb(r.used) + ' of ' + gb(r.limit) + ' used today.') : (r.error || 'Pixeldrain did not answer.');
+                            box.text(msg).css('color', r.ok ? 'var(--t-ok, #3d7a4a)' : 'var(--t-fail, #c0392b)');
+                        });
+                    });
+                })();
                 $('#test_metron').click(function () {
                     var box = $('#metron_status');
                     box.text('Testing…');
