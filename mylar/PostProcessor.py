@@ -18,6 +18,7 @@ import shutil
 import datetime
 import re
 import shlex
+import threading
 import time
 import logging
 import json
@@ -29,6 +30,9 @@ from xml.dom.minidom import parseString
 import mylar
 
 from mylar import logger, db, helpers, updater, notifiers, filechecker, weeklypull, getimage, archives, autoadd
+
+PP_LOCK = threading.RLock()
+
 
 class PostProcessor(object):
     """
@@ -369,6 +373,19 @@ class PostProcessor(object):
 
 
     def Process(self):
+        archives.RUNS[0] += 1
+        try:
+            if not PP_LOCK.acquire(blocking=False):
+                logger.info('[POST-PROCESSING] Another post-processing run is working - %s will start when it finishes.' % self.nzb_name)
+                PP_LOCK.acquire()
+            try:
+                return self._locked_process()
+            finally:
+                PP_LOCK.release()
+        finally:
+            archives.RUNS[0] -= 1
+
+    def _locked_process(self):
         self.extracted = []
         started = time.time()
         source, source_name = self.nzb_folder, self.nzb_name

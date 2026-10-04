@@ -160,17 +160,21 @@ def _run(paths):
         try:
             myDB = db.DBConnection()
             watched = {str(r['ComicID']) for r in myDB.select('SELECT ComicID FROM comics')}
+            from mylar.PostProcessor import PP_LOCK
             reg = _load()
             groups = {}
-            for p in paths:
-                reg[p] = {'at': time.time()}
-                info = _parse(p)
-                if not info:
-                    continue
-                key = (_norm(info['series']), info['year'], _pack_date(p))
-                groups.setdefault(key, {'info': info, 'files': [], 'cvid': None})['files'].append(p)
-                if not groups[key]['cvid']:
-                    groups[key]['cvid'] = _comicinfo_issueid(p)
+            with PP_LOCK:
+                for p in paths:
+                    reg[p] = {'at': time.time()}
+                    if not os.path.isfile(p):
+                        continue
+                    info = _parse(p)
+                    if not info:
+                        continue
+                    key = (_norm(info['series']), info['year'], _pack_date(p))
+                    groups.setdefault(key, {'info': info, 'files': [], 'cvid': None})['files'].append(p)
+                    if not groups[key]['cvid']:
+                        groups[key]['cvid'] = _comicinfo_issueid(p)
             added, unknown = [], []
             archives.busy('Finding series for %s unclaimed issues' % len(paths))
             for (nm, year, packdate), g in groups.items():

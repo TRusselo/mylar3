@@ -11,6 +11,7 @@ COMIC_EXT = ('.cbz', '.cbr', '.cb7', '.pdf')
 IMAGE_EXT = ('.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp', '.avif', '.jxl')
 ARCHIVE_EXT = ('.zip', '.rar')
 SETTLE_SECONDS = 120
+RUNS = [0]
 ACTIVITY = {'state': 'Idle', 'detail': '', 'since': None, 'last': '', 'last_at': None, 'notes': []}
 
 
@@ -34,7 +35,7 @@ def processing():
         queued = mylar.PP_QUEUE is not None and mylar.PP_QUEUE.qsize() > 0
     except Exception:
         queued = False
-    return ACTIVITY['state'] == 'Working' or autoadd.running() or queued
+    return ACTIVITY['state'] == 'Working' or RUNS[0] > 0 or autoadd.running() or queued
 
 
 def wait_idle(label, limit=1800):
