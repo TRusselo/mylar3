@@ -306,7 +306,7 @@ def _metron_pass(myDB, lib, token, force):
         _status['done'] = n
 
 
-COVERAGE = ['fills_gaps', 'covered', 'dup_plus', 'partly', 'not_in_library', 'unknown']
+COVERAGE = ['fills_gaps', 'covered', 'partly', 'not_in_library', 'unknown']
 
 
 def _norm(name):
@@ -333,12 +333,10 @@ def _trades(myDB, status, comics):
             cov = 'not_in_library' if unresolved else 'unknown'
         elif len(own) < len(found):
             cov = 'fills_gaps'
-        elif not unresolved:
-            cov = 'covered'
         elif same:
             cov = 'partly'
         else:
-            cov = 'dup_plus'
+            cov = 'covered'
         out.append({'row': r, 'trade': t, 'comic': c, 'found': found, 'own': own, 'unresolved': unresolved,
                     'other': other, 'coverage': cov})
     return out

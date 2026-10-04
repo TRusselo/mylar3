@@ -1,10 +1,7 @@
 :root {
   --lg-gap: var(--t-want, #c4186f); --lg-unrec: var(--t-snatch, #b98200); --lg-after: var(--t-arch, #0a7fb0);
   --lg-before: var(--t-skip, #6b7682); --lg-cut: var(--t-skip, #6b7682); --lg-done: var(--t-ok, #3d7a4a);
-  --lg-plus: #2b8a7e;
 }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --lg-plus: #4fc4b4; } }
-:root[data-theme="dark"] { --lg-plus: #4fc4b4; }
 .lg { width: 100%; box-sizing: border-box; clear: both; display: flex; flex-direction: column; gap: 16px; padding-block: 8px 32px; line-height: 1.45; }
 .lg-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; border-bottom: 3px solid var(--t-fg); padding-bottom: 10px; }
 .lg-title { font-family: var(--t-display); font-weight: 800; font-size: clamp(32px, 4.5vw, 46px); line-height: .95; margin: 0; text-transform: uppercase; }

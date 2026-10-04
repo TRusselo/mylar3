@@ -3,10 +3,10 @@
   var ML = ['Gap', 'Files not recognised', 'After last owned', 'Before first owned', 'After collection ended', 'Complete'];
   var MH = ['Owned issues on both sides', 'Series has files Mylar can\'t match', 'Past your last owned issue', 'Before your first owned issue', 'Released after your cutoff date', 'Series where you have every issue'];
   var COMPLETE = 5;
-  var CK = ['fills_gaps', 'covered', 'dup_plus', 'partly', 'not_in_library', 'unknown'];
-  var CC = ['--lg-gap', '--lg-done', '--lg-plus', '--lg-after', '--lg-before', '--lg-cut'];
-  var CL = ['Fills gaps', 'Duplicates singles', 'Duplicates + tie-ins', 'Partly covered', 'Not in library', 'No contents info'];
-  var CH = ['Collects issues you don\'t have as singles', 'You own every issue it collects', 'Every tracked issue owned, plus tie-ins from series you don\'t track', 'Its own series has issues Mylar doesn\'t track', 'Collects series you don\'t track', 'No source lists what it collects'];
+  var CK = ['fills_gaps', 'covered', 'partly', 'not_in_library', 'unknown'];
+  var CC = ['--lg-gap', '--lg-done', '--lg-after', '--lg-before', '--lg-cut'];
+  var CL = ['Fills gaps', 'Duplicates singles', 'Partly covered', 'Not in library', 'No contents info'];
+  var CH = ['Collects issues you don\'t have as singles', 'You own every tracked issue it collects', 'Its own series has issues Mylar doesn\'t track', 'Collects series you don\'t track', 'No source lists what it collects'];
   var BOOK = '<svg class="lg-ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 4.2C6.6 3 4.4 2.6 1.5 2.8v9.6c2.9-.2 5.1.2 6.5 1.4 1.4-1.2 3.6-1.6 6.5-1.4V2.8c-2.9-.2-5.1.2-6.5 1.4zM8 4.2v9.6"/></svg>';
 
   var st = {
@@ -32,7 +32,7 @@
     if (st.tab === 'missing') {
       counts = [0, 0, 0, 0, 0, M.complete.length]; M.rows.forEach(function (r) { counts[r[0]]++; }); L = ML; H = MH; K = MK;
     } else {
-      counts = [0, 0, 0, 0, 0, 0]; C.trades.forEach(function (t) { if (!st.owned || isOwned(t)) counts[CK.indexOf(t.coverage)]++; }); L = CL; H = CH; K = CC;
+      counts = [0, 0, 0, 0, 0]; C.trades.forEach(function (t) { if (!st.owned || isOwned(t)) counts[CK.indexOf(t.coverage)]++; }); L = CL; H = CH; K = CC;
     }
     $id('lg-tiles').innerHTML = L.map(function (l, i) {
       if (st.tab === 'missing' && i === 4 && !M.cutoff) return '';
