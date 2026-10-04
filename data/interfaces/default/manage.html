@@ -260,7 +260,11 @@
                               <tr>
                                 <td id="job" style="width: 50px;text-align: center;">${j['jobname']}</td>
                                 <td id="nextrun" style="width: 90px;text-align: center;">${j['next_run_datetime']}</td>
+                                %if j['jobname'] in ('Auto-Search', 'RSS Feeds', 'Folder Monitor', 'Check Version'):
+                                <td id="interval" style="width: 20px;text-align: center;white-space: nowrap;"><input type="number" class="job-interval" data-job="${j['jobname']}" value="${j['interval'].split(' ')[0]}" min="1" style="width: 60px;" aria-label="${j['jobname']} interval in minutes"> mins</td>
+                                %else:
                                 <td id="interval" style="width: 20px;text-align: center;">${j['interval']}</td>
+                                %endif
                                 <td id="prevrun" style="width: 90px;text-align: center;">${j['prev_run_datetime']}</td>
                                 <td id="status" style="width: 50px;text-align: center;color: ${grade};">${j['status']}</td>
                                 <td id="options" style="width: 50px;text-align: center;">
@@ -362,6 +366,16 @@
         }
         ppRefresh();
         setInterval(ppRefresh, 5000);
+        $(document).on('change', '.job-interval', function () {
+            var el = $(this), job = el.data('job');
+            $.getJSON('job_interval', {job: job, minutes: el.val()}, function (r) {
+                el.css('outline', r.ok ? '2px solid #52A9EE' : '2px solid #c0392b');
+                el.attr('title', r.ok ? (r.note || job + ' now runs every ' + r.minutes + ' minutes') : r.error);
+                if (!r.ok) { el.val(el.prop('defaultValue')); }
+                else { el.prop('defaultValue', r.minutes); }
+                $('#ajaxMsg').text(r.ok ? (r.note || job + ' now runs every ' + r.minutes + ' minutes') : r.error).show().delay(3000).fadeOut();
+            });
+        });
         function checkTime(i) {
                 if (i < 10) {i = "0" + i}; // add zero in front of numbers if < 10
                 return i;

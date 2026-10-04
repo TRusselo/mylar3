@@ -4325,6 +4325,40 @@ class WebInterface(object):
         return serve_template(templatename="manage.html", title="Manage", mylarRoot=mylarRoot, jobs=jobresults, queues=queues, scan_info=scan_info)
     manage.exposed = True
 
+    JOB_INTERVALS = {'Auto-Search': ('search', 'SEARCH_INTERVAL', 360),
+                     'RSS Feeds': ('rss', 'RSS_CHECKINTERVAL', 20),
+                     'Folder Monitor': ('monitor', 'DOWNLOAD_SCAN_INTERVAL', 1),
+                     'Check Version': ('version', 'CHECK_GITHUB_INTERVAL', 60)}
+
+    def job_interval(self, job, minutes, **kwargs):
+        cherrypy.response.headers['Content-Type'] = 'application/json'
+        if job not in self.JOB_INTERVALS:
+            return json.dumps({'ok': False, 'error': '%s has a fixed schedule.' % job})
+        jobid, key, low = self.JOB_INTERVALS[job]
+        try:
+            minutes = int(minutes)
+        except (TypeError, ValueError):
+            return json.dumps({'ok': False, 'error': 'Enter a whole number of minutes.'})
+        if minutes < low:
+            return json.dumps({'ok': False, 'error': '%s can run at most every %s minutes.' % (job, low)})
+        setattr(mylar.CONFIG, key, minutes)
+        mylar.CONFIG.writeconfig(values={key.lower(): minutes})
+        try:
+            from apscheduler.triggers.interval import IntervalTrigger
+            sjob = mylar.SCHED.get_job(jobid)
+            trigger = IntervalTrigger(minutes=minutes, timezone='UTC')
+            if sjob is not None and sjob.next_run_time is None:
+                mylar.SCHED.modify_job(jobid, trigger=trigger)
+            else:
+                mylar.SCHED.reschedule_job(jobid, trigger=trigger)
+            helpers.job_management(write=True)
+        except Exception as e:
+            logger.warn('[SCHEDULER] Saved %s = %s, but could not reschedule %s now: %s' % (key.lower(), minutes, job, e))
+            return json.dumps({'ok': True, 'minutes': minutes, 'note': 'Saved - takes effect after a restart.'})
+        logger.info('[SCHEDULER] %s now runs every %s minutes.' % (job, minutes))
+        return json.dumps({'ok': True, 'minutes': minutes})
+    job_interval.exposed = True
+
     def jobmanage(self, job, mode):
         #logger.fdebug('%s : %s' % (job, mode))
         jobid = None
@@ -7860,6 +7894,8 @@ class WebInterface(object):
         try:
             on = all([mylar.CONFIG.ENABLE_CHECK_FOLDER, mylar.CONFIG.CHECK_FOLDER, int(mylar.CONFIG.DOWNLOAD_SCAN_INTERVAL or 0) > 0])
             if on:
+                from apscheduler.triggers.interval import IntervalTrigger
+                mylar.SCHED.modify_job('monitor', trigger=IntervalTrigger(minutes=int(mylar.CONFIG.DOWNLOAD_SCAN_INTERVAL), timezone='UTC'))
                 mylar.SCHED.resume_job('monitor')
                 if mylar.MONITOR_STATUS != 'Running':
                     mylar.MONITOR_STATUS = 'Waiting'

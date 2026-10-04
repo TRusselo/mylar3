@@ -534,7 +534,7 @@ def start():
             VERSION_SCHEDULER.pause()
 
             fm = PostProcessor.FolderCheck()
-            MONITOR_SCHEDULER = SCHED.add_job(func=fm.run, id='monitor', name='Folder Monitor', trigger=IntervalTrigger(hours=0, minutes=int(CONFIG.DOWNLOAD_SCAN_INTERVAL), timezone='UTC'))
+            MONITOR_SCHEDULER = SCHED.add_job(func=fm.run, id='monitor', name='Folder Monitor', max_instances=1, trigger=IntervalTrigger(hours=0, minutes=int(CONFIG.DOWNLOAD_SCAN_INTERVAL), timezone='UTC'))
             MONITOR_SCHEDULER.pause()
 
             #load up the previous runs from the job sql table so we know stuff...
