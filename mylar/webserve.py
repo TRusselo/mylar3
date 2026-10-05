@@ -4803,6 +4803,9 @@ class WebInterface(object):
         problem = webp.check_options(opts)
         if problem:
             return json.dumps({'error': problem})
+        if opts['backup_dir'] and opts['backup_dir'] != (mylar.CONFIG.WEBP_BACKUP_DIR or ''):
+            mylar.CONFIG.WEBP_BACKUP_DIR = opts['backup_dir']
+            mylar.CONFIG.writeconfig(values={'webp_backup_dir': opts['backup_dir']})
         if not webp.start_preview(opts):
             return json.dumps({'error': 'A preview or conversion is already running.'})
         return json.dumps({'started': True, 'status': webp.status()})
