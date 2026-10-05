@@ -102,6 +102,23 @@ def all_sources():
     return out
 
 
+def size_bytes(text):
+    m = re.search(r'(\d+(?:[.,]\d+)?)\s*([KMGT]?)(?:i?B)?\b', str(text or ''), re.I)
+    if not m:
+        return None
+    return int(float(m.group(1).replace(',', '.')) * 1024 ** ' KMGT'.index(m.group(2).upper() or ' '))
+
+
+def large_limit():
+    if not getattr(mylar.CONFIG, 'DDL_MAIN_LARGE_LAST', False):
+        return None
+    try:
+        mb = int(getattr(mylar.CONFIG, 'DDL_MAIN_LARGE_MB', 400) or 400)
+    except (TypeError, ValueError):
+        mb = 400
+    return mb * 1024 * 1024
+
+
 def order(size_bytes=None):
     off = disabled()
     result = [n for n in configured_order() if n not in off]
@@ -109,6 +126,11 @@ def order(size_bytes=None):
         result.remove('pixeldrain')
         result.append('pixeldrain')
         logger.fdebug('[DDL-SOURCES] Pixeldrain allowance too low for %s bytes - trying it last.' % size_bytes)
+    limit = large_limit()
+    if 'main' in result and size_bytes and limit and size_bytes > limit and result[-1] != 'main':
+        result.remove('main')
+        result.append('main')
+        logger.info('[DDL-SOURCES] %s MB is over the %s MB limit for the GetComics server - trying the other hosts first.' % (size_bytes // 1048576, limit // 1048576))
     return result
 
 

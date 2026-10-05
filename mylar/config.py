@@ -44,6 +44,8 @@ _CONFIG_DEFINITIONS = OrderedDict({
     'METRON_API_TOKEN': (str, 'Metron', None),
     'DDL_DISABLED_SOURCES': (str, 'DDL', '[]'),
     'PIXELDRAIN_API_KEY': (str, 'DDL', None),
+    'DDL_MAIN_LARGE_LAST': (bool, 'DDL', False),
+    'DDL_MAIN_LARGE_MB': (int, 'DDL', 400),
     'SYNO_FIX': (bool, 'General', False),
     'LAUNCH_BROWSER' : (bool, 'General', False),
     'WANTED_TAB_OFF': (bool, 'General', False),

@@ -823,10 +823,7 @@ class GC(object):
         elif len(tmp_links) > 1:
             logger.info('Multiple available download options (%s) - checking configuration to see which to grab...' % (" ,".join(tmp_sites)))
             site_check = [y for x in link_types for y in tmp_sites if x in y]
-            try:
-                _size_bytes = helpers.human2bytes(re.sub('/s', '', str(tmp_links[0].get('size') or '')).strip())
-            except Exception:
-                _size_bytes = None
+            _size_bytes = ddlsources.size_bytes(tmp_links[0].get('size'))
             for ddlp in ddlsources.order(_size_bytes):
                 force_title = False
                 site_lp = ddlp
@@ -1205,10 +1202,7 @@ class GC(object):
                 jd2_priority_list = ["HIGHEST", "HIGH", "DEFAULT", "LOWEST"]
                 jd2_priority_map = {}
                 
-                try:
-                    _jd2_size = helpers.human2bytes(re.sub('/s', '', str(x.get('size') or '')).strip())
-                except Exception:
-                    _jd2_size = None
+                _jd2_size = ddlsources.size_bytes(x.get('size'))
                 for i, site in enumerate(ddlsources.order(_jd2_size)):
                     jd2_priority_map[site] = jd2_priority_list[i] if i < len(jd2_priority_list) else "LOWEST"
                     
