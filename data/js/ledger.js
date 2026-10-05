@@ -160,6 +160,15 @@
     if (st.tab === 'missing') { if (st.by === 'issue') renderIssues(); else renderSeries(); }
     else renderTrades();
     selBar();
+    syncAll();
+  }
+
+  function syncAll() {
+    var all = $id('lg-all');
+    if (!all) return;
+    var boxes = $('#lg-table tbody td.lg-chk input'), on = boxes.filter(':checked').length;
+    all.checked = boxes.length > 0 && on === boxes.length;
+    all.indeterminate = on > 0 && on < boxes.length;
   }
 
   function renderIssues() {
@@ -249,7 +258,7 @@
     }
     st.confirm = null;
     var on2 = this.checked; ids(this).forEach(function (i) { if (on2) st.sel[i] = 1; else delete st.sel[i]; });
-    $(this).closest('tr').toggleClass('lg-on', on2); selBar();
+    $(this).closest('tr').toggleClass('lg-on', on2); selBar(); syncAll();
   });
   var KEYS = 'Keys: ↑/↓ move through the list, Space ticks a row, Shift+↑/↓ ticks as you go.';
   function boxRows() { return $('#lg-table tbody tr').filter(function () { return $(this).find('td.lg-chk input').length > 0; }); }
