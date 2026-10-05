@@ -106,8 +106,8 @@
                     }
                 }
         };
-        function activecheck() {
-                if (document.hidden) { return; }
+        function activecheck(force) {
+                if (document.hidden && force !== true) { return; }
                 $.get('check_ActiveDDL',
                     function(data){
                         if (data.error != undefined) {
@@ -129,7 +129,14 @@
                             $("#progress").html(percent);
                             document.getElementById("series").innerHTML = obj['a_series'];
                             document.getElementById("filename").innerHTML = obj['a_filename'];
-                            document.getElementById("size").innerHTML = obj['a_size'];
+                            var detail = obj['a_progress'] || obj['a_size'];
+                            if (obj['a_speed']) { detail += ' &middot; ' + obj['a_speed']; }
+                            if (obj['a_eta']) { detail += ' &middot; ' + obj['a_eta']; }
+                            document.getElementById("size").innerHTML = detail;
+                            $('#queue_table tbody tr').each(function () {
+                                var cells = $(this).children('td');
+                                if (cells.eq(4).text() == 'Downloading') { cells.eq(3).text(percent); }
+                            });
                             document.getElementById("status").innerHTML = status;
                             qmm = document.getElementById("btn_menu");
                             if (qmm.style.display == "inline-block"){
@@ -336,7 +343,7 @@
                      },
                 });
             };
-            activecheck();
+            activecheck(true);
         };
         $(document).ready(function() {       
             initThisPage();

@@ -194,6 +194,39 @@ class WebMaintenance(object):
     shutdown.exposed = True
 
 
+_DL_SAMPLE = {}
+
+
+def _human_bytes(n):
+    for unit in ('B', 'KB', 'MB', 'GB'):
+        if n < 1024 or unit == 'GB':
+            return ('%.0f %s' if unit in ('B', 'KB') else '%.1f %s') % (n, unit)
+        n /= 1024.0
+
+
+def _download_rate(did, done, total):
+    now = time.time()
+    prev = _DL_SAMPLE.get('last')
+    speed = prev[3] if prev and prev[0] == did else None
+    if prev and prev[0] == did and done >= prev[1] and now - prev[2] >= 2:
+        inst = (done - prev[1]) / (now - prev[2])
+        speed = inst if speed is None else speed * 0.6 + inst * 0.4
+        _DL_SAMPLE['last'] = (did, done, now, speed)
+    elif not prev or prev[0] != did or done < prev[1]:
+        _DL_SAMPLE['last'] = (did, done, now, None)
+    out = {'a_progress': '%s of %s' % (_human_bytes(done), _human_bytes(total))}
+    if speed:
+        out['a_speed'] = '%s/s' % _human_bytes(speed)
+        left = max(total - done, 0) / speed
+        if left < 90:
+            out['a_eta'] = 'under 2 min left'
+        elif left < 5400:
+            out['a_eta'] = 'about %d min left' % round(left / 60)
+        else:
+            out['a_eta'] = 'about %.1f h left' % (left / 3600)
+    return out
+
+
 class WebInterface(object):
 
     auth = AuthController()
@@ -7923,6 +7956,14 @@ class WebInterface(object):
     def pp_activity(self, **kwargs):
         cherrypy.response.headers['Content-Type'] = 'application/json'
         out = archives.snapshot()
+        try:
+            dl = json.loads(self.check_ActiveDDL())
+            if dl.get('status') == 'Downloading':
+                out['download'] = '%s - %s%s' % (dl.get('a_series'), dl.get('percent'),
+                                                 ''.join(' - %s' % dl[k] for k in ('a_speed', 'a_eta') if dl.get(k)))
+            out['download_counts'] = dl.get('counts') or {}
+        except Exception:
+            out['download'] = None
         out.update(monitor_status=mylar.MONITOR_STATUS, monitor_enabled=bool(mylar.CONFIG.ENABLE_CHECK_FOLDER),
                    monitor_folder=mylar.CONFIG.CHECK_FOLDER or '', interval=mylar.CONFIG.DOWNLOAD_SCAN_INTERVAL,
                    review_dir=archives.review_dir(), now=time.time())
@@ -9261,12 +9302,19 @@ class WebInterface(object):
         myDB = db.DBConnection()
         out['counts'] = {r['status']: r['count'] for r in myDB.select("SELECT status, count(*) AS count FROM ddl_info GROUP BY status")}
         out['waiting'] = mylar.DDL_QUEUE.qsize()
+        if out.get('status') == 'Downloading' and out.get('a_total'):
+            out.update(_download_rate(out['a_id'], out['a_done'], out['a_total']))
         return json.dumps(out)
     check_ActiveDDL.exposed = True
 
     def _active_ddl(self):
          myDB = db.DBConnection()
-         active = myDB.selectone("SELECT * FROM DDL_INFO WHERE STATUS = 'Downloading'").fetchone()
+         from mylar.queues.ddl import ACTIVE
+         active = None
+         if ACTIVE[0] is not None:
+             active = myDB.selectone("SELECT * FROM DDL_INFO WHERE ID = ? AND STATUS = 'Downloading'", [ACTIVE[0]]).fetchone()
+         if active is None:
+             active = myDB.selectone("SELECT * FROM DDL_INFO WHERE STATUS = 'Downloading'").fetchone()
          if active is None:
              return json.dumps({'status':   'There are no active downloads currently being attended to',
                                 'percent':   0,
@@ -9307,6 +9355,8 @@ class WebInterface(object):
                                         'a_year':      active['year'],
                                         'a_filename':  active['filename'],
                                         'a_size':      active['size'],
+                                        'a_done':      filesize,
+                                        'a_total':     int(remote_filesize),
                                         'a_id':        active['id']})
                  statline = '%s does not exist.</br> This probably needs to be restarted (use the option in the GUI)' % filelocation
              else:

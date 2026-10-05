@@ -229,6 +229,7 @@
                   <span id="pp_detail" class="ip-message"></span>
               </div>
               <table class="ip-stats">
+                  <tr><td>Downloading</td><td id="pp_download" colspan="3">-</td></tr>
                   <tr><td>Folder monitor</td><td id="pp_monitor" colspan="3">-</td></tr>
                   <tr><td>Last pass</td><td id="pp_last_at">-</td><td colspan="2" id="pp_last">-</td></tr>
                   <tr><td>Unwanted issues go to</td><td colspan="3" id="pp_review">-</td></tr>
@@ -362,6 +363,8 @@
                 $('#pp_last_at').text(ppAgo(d.last_at, d.now));
                 $('#pp_last').text(d.last || '-');
                 $('#pp_review').text(d.review_dir);
+                var dc = d.download_counts || {}, dq = dc['Queued'] ? ' (' + dc['Queued'] + ' queued)' : '';
+                $('#pp_download').html(d.download ? $('<a href="queueManage">').text(d.download + dq) : $('<span>').text('Nothing' + dq));
             });
         }
         ppRefresh();
