@@ -15,6 +15,11 @@
     cfg.innerHTML = '<svg class="nav-gear" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.6-2-3.4-2.4 1a7.4 7.4 0 0 0-2.6-1.5L14 2.5h-4l-.4 2.5A7.4 7.4 0 0 0 7 6.5l-2.4-1-2 3.4 2 1.6a7.6 7.6 0 0 0 0 3l-2 1.6 2 3.4 2.4-1a7.4 7.4 0 0 0 2.6 1.5l.4 2.5h4l.4-2.5a7.4 7.4 0 0 0 2.6-1.5l2.4 1 2-3.4z"/></svg>';
   }
 
+  var hdr = document.querySelector('header');
+  function headHeight() { if (hdr) document.documentElement.style.setProperty('--carbon-head', hdr.offsetHeight + 'px'); }
+  headHeight();
+  window.addEventListener('resize', headHeight);
+
   var page = (location.pathname.split('/').pop() || 'home').toLowerCase();
   var groups = {
     home: ['home', 'comicdetails', 'issuedetails', 'searchit', 'addcomic'],

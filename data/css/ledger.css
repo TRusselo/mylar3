@@ -74,3 +74,9 @@
 .lg-confirm code { font-family: var(--t-mono); font-size: 12px; }
 .lg-confirm .lg-btn { margin: 6px 6px 0 0; }
 .lg .lg-danger { color: var(--t-fail) !important; border-color: var(--t-fail) !important; }
+.lg-tile .lg-tile-w { font-style: normal; font-size: 12px; font-weight: 600; color: var(--t-want); margin-top: 2px; }
+.lg-table tbody tr { scroll-margin-top: calc(var(--carbon-head, 0px) + var(--lg-bar-h, 70px) + 8px); scroll-margin-bottom: 12px; }
+.lg-table tbody tr:focus-within td { background: color-mix(in srgb, var(--t-accent) 6%, var(--t-surface)); }
+.lg-table tbody tr:focus-within td:first-child { box-shadow: inset 3px 0 0 var(--t-accent); }
+.lg-table tbody tr.lg-on:focus-within td { background: color-mix(in srgb, var(--t-accent) 16%, var(--t-surface)); }
+.lg-table td.lg-chk input:focus-visible { outline: 2px solid var(--t-accent); outline-offset: 2px; }

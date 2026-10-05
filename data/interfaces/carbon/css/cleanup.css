@@ -57,3 +57,9 @@ footer { margin-top: 40px !important; padding: 16px !important; font-size: 12px;
 .lg-head .page-actions { margin-top: 8px !important; }
 .lg-head .page-actions a { padding: 4px 8px !important; }
 #main > h1.page-title { margin: 0 0 14px !important; }
+.lg-actions { top: var(--carbon-head, 56px) !important; z-index: 40 !important; box-shadow: 0 10px 16px -12px rgba(0, 0, 0, .7); }
+#markissue, #markannual, #markissues_container, #markcomics, #markcomic {
+  position: sticky !important; top: var(--carbon-head, 56px) !important; float: none !important; z-index: 40;
+  background: var(--t-raised) !important; padding: 8px 10px !important; border: 1px solid var(--t-line); border-radius: 4px;
+  box-shadow: 0 10px 16px -12px rgba(0, 0, 0, .7);
+}

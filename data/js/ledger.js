@@ -11,7 +11,7 @@
 
   var st = {
     tab: 'missing', by: 'issue', kinds: { missing: [0], collected: [0, 1] }, q: '', pub: '', dec: '',
-    sort: null, limit: 300, sel: {}, open: {}
+    sort: null, limit: 300, sel: {}, open: {}, status: ''
   };
   try { var saved = JSON.parse(localStorage.getItem('mylar-ledger') || 'null'); if (saved) { st.tab = saved.tab || st.tab; st.kinds = saved.kinds || st.kinds; st.by = saved.by || st.by; } } catch (e) {}
   function save() { try { localStorage.setItem('mylar-ledger', JSON.stringify({ tab: st.tab, kinds: st.kinds, by: st.by })); } catch (e) {} }
@@ -29,14 +29,15 @@
 
   function tiles() {
     var counts, L, H, K, keys = st.kinds[st.tab];
+    var wanted = [0, 0, 0, 0, 0, 0];
     if (st.tab === 'missing') {
-      counts = [0, 0, 0, 0, 0, M.complete.length]; M.rows.forEach(function (r) { counts[r[0]]++; }); L = ML; H = MH; K = MK;
+      counts = [0, 0, 0, 0, 0, M.complete.length]; M.rows.forEach(function (r) { counts[r[0]]++; if (r[7] === 'Wanted') wanted[r[0]]++; }); L = ML; H = MH; K = MK;
     } else {
       counts = [0, 0, 0, 0, 0]; C.trades.forEach(function (t) { counts[CK.indexOf(t.coverage)]++; }); L = CL; H = CH; K = CC;
     }
     $id('lg-tiles').innerHTML = L.map(function (l, i) {
       if (st.tab === 'missing' && i === 4 && !M.cutoff) return '';
-      return '<button class="lg-tile" style="--c:var(' + K[i] + ')" data-k="' + i + '" aria-pressed="' + (keys.indexOf(i) >= 0) + '"><b>' + fmt(counts[i]) + '</b><span>' + l + '</span><small>' + H[i] + '</small></button>';
+      return '<button class="lg-tile" style="--c:var(' + K[i] + ')" data-k="' + i + '" aria-pressed="' + (keys.indexOf(i) >= 0) + '"><b>' + fmt(counts[i]) + '</b><span>' + l + '</span><small>' + H[i] + '</small>' + (wanted[i] ? '<em class="lg-tile-w">' + fmt(wanted[i]) + ' already Wanted</em>' : '') + '</button>';
     }).join('');
   }
 
@@ -62,6 +63,7 @@
     $id('lg-dec').innerHTML = '<option value="">All decades</option>' + dl.map(function (d) { return '<option value="' + d + '">' + d + 's</option>'; }).join('');
     $id('lg-dec').value = st.dec;
     $id('lg-dec').hidden = st.tab !== 'missing';
+    $id('lg-stat').hidden = st.tab !== 'missing';
     $id('lg-cutoff-wrap').hidden = st.tab !== 'missing';
     $id('lg-cutoff').value = (M && M.cutoff) || '';
     $('.lg-seg').toggle(st.tab === 'missing');
@@ -70,6 +72,7 @@
   $('#lg-q').on('input', function () { st.q = this.value.trim().toLowerCase(); st.limit = 300; render(); });
   $('#lg-pub').on('change', function () { st.pub = this.value; st.limit = 300; render(); });
   $('#lg-dec').on('change', function () { st.dec = this.value; st.limit = 300; render(); });
+  $('#lg-stat').on('change', function () { st.status = this.value; st.limit = 300; render(); });
   $('#lg-more').on('click', function () { st.limit += 300; render(); });
   $('#lg-cutoff').on('change', function () {
     $.getJSON('ledger_cutoff', { cutoff: this.value }, function (r) {
@@ -127,6 +130,20 @@
     }).join('');
   }
 
+  var STATS = ['Wanted', 'Skipped', 'Ignored', 'Snatched', 'Failed'];
+  function statusFilter(base) {
+    var c = {};
+    base.forEach(function (r) { c[r[7]] = (c[r[7]] || 0) + 1; });
+    var list = STATS.filter(function (k) { return c[k]; }).concat(Object.keys(c).filter(function (k) { return STATS.indexOf(k) < 0; }).sort());
+    if (st.status && !c[st.status]) list.push(st.status);
+    $id('lg-stat').innerHTML = '<option value="">Any status</option>' + list.map(function (k) { return '<option value="' + esc(k) + '">' + esc(k) + ' (' + fmt(c[k] || 0) + ')</option>'; }).join('');
+    $id('lg-stat').value = st.status;
+    return { rows: st.status ? base.filter(function (r) { return r[7] === st.status; }) : base, wanted: c.Wanted || 0 };
+  }
+  function countLine(shown, total, noun, wanted) {
+    $id('lg-count').textContent = fmt(shown) + ' of ' + fmt(total) + ' ' + noun + (wanted && st.status !== 'Wanted' ? ' · ' + fmt(wanted) + ' already Wanted' : '');
+  }
+
   function missingRows() {
     var keys = st.kinds.missing;
     return M.rows.filter(function (r) {
@@ -146,7 +163,7 @@
   }
 
   function renderIssues() {
-    var f = missingRows(), s = st.sort || { key: 'k', dir: 1 };
+    var sf = statusFilter(missingRows()), f = sf.rows, s = st.sort || { key: 'k', dir: 1 };
     head([['k', 'Kind'], ['series', 'Series'], ['n', '#', 'num'], ['t', 'Title'], ['d', 'Released'], ['st', 'Status'], ['tr', 'Trades'], ['own', 'Series owned', 'num']], true);
     var tv = function (r) { var l = r[8] || []; return l.some(function (i) { return M.trades[i][4]; }) ? 2 : l.length ? 1 : 0; };
     var v = function (r) { var S = M.series[r[1]]; return s.key === 'series' ? S[0].toLowerCase() : s.key === 'own' ? S[2] / (S[3] || 1) : s.key === 'k' ? r[0] : s.key === 'n' ? r[3] : s.key === 't' ? r[4] : s.key === 'd' ? r[5] : s.key === 'tr' ? -tv(r) : r[7]; };
@@ -161,23 +178,23 @@
         '<td class="lg-dim lg-title-cell">' + (esc(r[4]) || '—') + '</td><td class="lg-mono">' + (r[5] || '—') + '</td>' +
         '<td><span class="lg-status lg-st-' + esc(r[7]) + '">' + esc(r[7]) + '</span></td><td class="lg-trades">' + tradeCell(r[8]) + '</td><td class="num lg-mono">' + S[2] + ' / ' + S[3] + '</td></tr>';
     }).join('') : '<tr><td class="lg-empty" colspan="9">' + (st.kinds.missing.length === 1 && st.kinds.missing[0] === COMPLETE ? 'Complete series are listed in the By series view.' : 'No issues match. Turn on more kinds above or clear the search.') + '</td></tr>');
-    $id('lg-count').textContent = fmt(Math.min(st.limit, f.length)) + ' of ' + fmt(f.length) + ' issues';
+    countLine(Math.min(st.limit, f.length), f.length, 'issues', sf.wanted);
     $id('lg-more').hidden = f.length <= st.limit;
-    $id('lg-note').textContent = 'Trades: a filled book means a trade you own collects the issue; an outlined one means a trade you don\'t own collects it. Wanted starts a search for those issues. Ignored stops Mylar from ever searching for them. Series lost completely aren\'t in Mylar, so they can\'t show here.';
+    $id('lg-note').textContent = KEYS + ' Trades: a filled book means a trade you own collects the issue; an outlined one means a trade you don\'t own collects it. Wanted starts a search for those issues. Ignored stops Mylar from ever searching for them. Series lost completely aren\'t in Mylar, so they can\'t show here.';
   }
 
   function renderSeries() {
-    var f = missingRows(), g = {};
-    f.forEach(function (r) { var x = g[r[1]] || (g[r[1]] = { s: r[1], c: [0, 0, 0, 0, 0], ids: [] }); x.c[r[0]]++; x.ids.push(r[6]); });
+    var sf = statusFilter(missingRows()), f = sf.rows, g = {};
+    f.forEach(function (r) { var x = g[r[1]] || (g[r[1]] = { s: r[1], c: [0, 0, 0, 0, 0], ids: [], w: 0 }); x.c[r[0]]++; x.ids.push(r[6]); if (r[7] === 'Wanted') x.w++; });
     var s = st.sort || { key: 'gap', dir: -1 };
     if (st.kinds.missing.indexOf(COMPLETE) >= 0) M.complete.forEach(function (si) {
       var S = M.series[si];
       if (g[si] || (st.pub && M.pubs[S[4]] !== st.pub) || (st.q && S[0].toLowerCase().indexOf(st.q) < 0)) return;
-      g[si] = { s: si, c: [0, 0, 0, 0, 0], ids: [], done: true };
+      g[si] = { s: si, c: [0, 0, 0, 0, 0], ids: [], w: 0, done: true };
     });
     var list = Object.keys(g).map(function (k) { var x = g[k], S = M.series[x.s]; x.series = S[0].toLowerCase(); x.pub = M.pubs[S[4]]; x.own = S[2] / (S[3] || 1); x.gap = x.c[0]; x.other = x.c[1] + x.c[2] + x.c[3] + x.c[4]; x.tr = -(S[6] || []).length; return x; });
     list.sort(function (a, b) { return s.dir * cmp(a[s.key], b[s.key]) || cmp(a.series, b.series); });
-    head([['series', 'Series'], ['pub', 'Publisher'], ['own', 'Owned', 'num'], ['gap', 'Gaps', 'num'], ['other', 'Other missing', 'num'], ['tr', 'Trades'], ['mix', 'Breakdown']], true);
+    head([['series', 'Series'], ['pub', 'Publisher'], ['own', 'Owned', 'num'], ['gap', 'Gaps', 'num'], ['other', 'Other missing', 'num'], ['w', 'Wanted', 'num'], ['tr', 'Trades'], ['mix', 'Breakdown']], true);
     var page = list.slice(0, st.limit);
     $('#lg-table tbody').html(page.length ? page.map(function (x) {
       var S = M.series[x.s], tot = S[3] || 1, all = x.ids.every(function (i) { return st.sel[i]; });
@@ -186,11 +203,12 @@
       return '<tr class="' + (all ? 'lg-on' : '') + (x.done ? ' lg-complete' : '') + '"><td class="lg-chk">' + (x.done ? '' : '<input type="checkbox" data-ids="' + x.ids.join(',') + '"' + (all ? ' checked' : '') + ' aria-label="Select all missing issues in this series">') + '</td>' +
         '<td><a href="comicDetails?ComicID=' + S[5] + '">' + esc(S[0]) + '</a> <span class="lg-dim">(' + esc(S[1]) + ')</span></td><td>' + esc(M.pubs[S[4]]) + '</td>' +
         '<td class="num lg-mono">' + S[2] + ' / ' + S[3] + '</td><td class="num lg-mono lg-strong">' + (x.gap || '') + '</td><td class="num lg-mono">' + (x.done ? '<span class="lg-pill" style="--c:var(--lg-done)">Complete</span>' : (x.other || '')) + '</td>' +
+        '<td class="num lg-mono lg-st-Wanted">' + (x.w || '') + '</td>' +
         '<td class="lg-trades">' + seriesTrades(S[6]) + '</td><td><div class="lg-bar">' + seg(S[2], '--lg-done') + x.c.map(function (n, i) { return seg(n, MK[i]); }).join('') + '</div></td></tr>';
-    }).join('') : '<tr><td class="lg-empty" colspan="8">No series match these filters.</td></tr>');
-    $id('lg-count').textContent = fmt(Math.min(st.limit, list.length)) + ' of ' + fmt(list.length) + ' series';
+    }).join('') : '<tr><td class="lg-empty" colspan="9">No series match these filters.</td></tr>');
+    countLine(Math.min(st.limit, list.length), list.length, 'series', sf.wanted);
     $id('lg-more').hidden = list.length <= st.limit;
-    $id('lg-note').textContent = 'Selecting a series selects all of its missing issues that match the filters.';
+    $id('lg-note').textContent = KEYS + ' Selecting a series selects all of its missing issues that match the filters.';
   }
 
   function renderTrades() {
@@ -219,7 +237,7 @@
     }).join('') : '<tr><td class="lg-empty" colspan="7">' + (C.trades.length ? 'No trades match these filters.' : 'Trade contents haven\'t been read yet. Use the button above.') + '</td></tr>');
     $id('lg-count').textContent = fmt(Math.min(st.limit, f.length)) + ' of ' + fmt(f.length) + ' trades';
     $id('lg-more').hidden = f.length <= st.limit;
-    $id('lg-note').textContent = 'Contents come from each trade\'s ComicVine description and, when a Metron token is set, Metron\'s reprint list. Trades neither source describes can\'t be checked. Select trades to want or skip the trade itself, want or ignore the singles it collects that you\'re missing, or move the singles it duplicates out of your library.';
+    $id('lg-note').textContent = KEYS + ' Contents come from each trade\'s ComicVine description and, when a Metron token is set, Metron\'s reprint list. Trades neither source describes can\'t be checked. Select trades to want or skip the trade itself, want or ignore the singles it collects that you\'re missing, or move the singles it duplicates out of your library.';
   }
 
   $('#lg-table').on('click', '[data-open]', function () { var k = this.getAttribute('data-open'); st.open[k] = !st.open[k]; render(); });
@@ -232,6 +250,22 @@
     st.confirm = null;
     var on2 = this.checked; ids(this).forEach(function (i) { if (on2) st.sel[i] = 1; else delete st.sel[i]; });
     $(this).closest('tr').toggleClass('lg-on', on2); selBar();
+  });
+  var KEYS = 'Keys: ↑/↓ move through the list, Space ticks a row, Shift+↑/↓ ticks as you go.';
+  function boxRows() { return $('#lg-table tbody tr').filter(function () { return $(this).find('td.lg-chk input').length > 0; }); }
+  function tick(box) { if (box && !box.checked) { box.checked = true; $(box).trigger('change'); } }
+  $(document).on('keydown', function (e) {
+    if ((e.key !== 'ArrowDown' && e.key !== 'ArrowUp') || e.altKey || e.ctrlKey || e.metaKey) return;
+    var t = e.target, tag = t.tagName, inTable = $(t).closest('#lg-table tbody').length > 0;
+    if (tag === 'SELECT' || tag === 'TEXTAREA' || t.isContentEditable || (tag === 'INPUT' && t.type !== 'checkbox')) return;
+    var rows = boxRows(); if (!rows.length) return;
+    var cur = inTable ? $(t).closest('tr') : $(), i = cur.length ? rows.index(cur) : -1;
+    var j = i < 0 ? 0 : Math.max(0, Math.min(rows.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)));
+    e.preventDefault();
+    var box = rows.eq(j).find('td.lg-chk input')[0];
+    if (e.shiftKey) { if (i >= 0) tick(rows.eq(i).find('td.lg-chk input')[0]); tick(box); }
+    box.focus({ preventScroll: true });
+    rows[j].scrollIntoView({ block: 'nearest' });
   });
   function ids(el) { var a = el.getAttribute('data-ids'); return a ? a.split(',') : [el.getAttribute('data-id')]; }
 
@@ -247,7 +281,8 @@
     if (!n) { st.confirm = null; return; }
     var html;
     if (st.tab === 'missing') {
-      html = '<span id="lg-selcount">' + fmt(n) + ' missing issues selected</span>' +
+      var already = M.rows.reduce(function (a, r) { return a + (st.sel[r[6]] && r[7] === 'Wanted' ? 1 : 0); }, 0);
+      html = '<span id="lg-selcount">' + fmt(n) + ' missing issues selected' + (already ? ' <small class="lg-dim">(' + fmt(already) + ' already Wanted)</small>' : '') + '</span>' +
         btn('issues:Wanted', 'Mark Wanted', n) + btn('issues:Skipped', 'Mark Skipped', n) + btn('issues:Ignored', 'Mark Ignored', n);
     } else {
       var sel = selTrades(), notOwned = sel.filter(function (t) { return !isOwned(t); }), owned = sel.filter(isOwned);
@@ -265,6 +300,7 @@
     html += '<button class="lg-btn lg-quiet" data-do="clear">Clear selection</button>';
     if (st.confirm) html += '<div class="lg-confirm">' + st.confirm + '</div>';
     bar.innerHTML = html;
+    try { document.documentElement.style.setProperty('--lg-bar-h', bar.offsetHeight + 'px'); } catch (e) {}
   }
 
   function mark(action, list, done) {
