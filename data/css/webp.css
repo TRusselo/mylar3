@@ -1,0 +1,25 @@
+.wp { max-width: 980px; }
+.wp-warn { border: 1px solid var(--lg-unrec); border-left: 6px solid var(--lg-unrec); border-radius: 4px; padding: 10px 14px; background: var(--t-surface); }
+.wp-warn ul { margin: 6px 0 0; padding-left: 20px; }
+.wp-warn li { margin: 3px 0; }
+.wp-form { display: flex; flex-direction: column; gap: 14px; }
+.wp-form fieldset { display: flex; flex-direction: column; gap: 10px; margin: 0; }
+.wp-row { display: grid; grid-template-columns: minmax(150px, 220px) 1fr; gap: 6px 14px; align-items: baseline; }
+.wp-row > span:first-child { font-weight: 600; }
+.wp-row small { display: block; color: var(--t-muted); font-size: 12px; margin-top: 3px; }
+.wp-row input[type=text] { max-width: 100%; box-sizing: border-box; }
+.wp-check { display: flex; gap: 8px; align-items: center; }
+.wp-danger { color: var(--lg-gap); }
+.wp-error { border: 1px solid var(--lg-gap); border-left: 6px solid var(--lg-gap); border-radius: 4px; padding: 10px 14px; color: var(--lg-gap); font-weight: 600; }
+.wp-detail code, .wp-dialog code { font-family: var(--t-mono, monospace); font-size: 12px; word-break: break-all; }
+.wp-detail details ul { margin: 6px 0; padding-left: 20px; }
+.wp .lg-btn.wp-go { font-weight: 700; }
+.wp-bar { height: 10px; border-radius: 5px; background: var(--t-line); overflow: hidden; }
+.wp-bar > div { height: 100%; width: 0; background: var(--lg-done); transition: width .4s; }
+.wp-current { font-family: var(--t-mono, monospace); font-size: 12px; color: var(--t-muted); word-break: break-all; margin: 0; }
+.wp-errors { margin: 0; padding-left: 20px; color: var(--lg-gap); font-size: 12px; }
+.wp-dialog { width: min(520px, calc(100vw - 32px)); box-sizing: border-box; border: 1px solid var(--t-line); border-radius: 6px; padding: 18px 20px; background: var(--t-surface, #fff); color: var(--t-fg, #111); }
+.wp-dialog::backdrop { background: rgba(0, 0, 0, .55); }
+.wp-dialog h2 { margin: 0 0 10px; }
+.wp-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
+@media (max-width: 640px) { .wp-row { grid-template-columns: 1fr; } }

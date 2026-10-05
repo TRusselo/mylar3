@@ -29,7 +29,7 @@ import pathlib
 from xml.dom.minidom import parseString
 import mylar
 
-from mylar import logger, db, helpers, updater, notifiers, filechecker, weeklypull, getimage, archives, autoadd
+from mylar import logger, db, helpers, updater, notifiers, filechecker, weeklypull, getimage, archives, autoadd, webp
 
 PP_LOCK = threading.RLock()
 
@@ -2673,6 +2673,8 @@ class PostProcessor(object):
                     #delete entry from nzblog table
                     myDB.action('DELETE from nzblog WHERE issueid=?', [issueid])
 
+                    webp.after_import(grab_dst)
+
                     if (sandwich is not None and 'S' in sandwich) or '_' in issueid:
                         logger.info('%s IssueArcID is : %s' % (module, issuearcid))
                         ctrlVal = {"IssueArcID":  issuearcid}
@@ -3382,6 +3384,8 @@ class PostProcessor(object):
                 #mylar.CONFIG.WEEKFOLDER = will *copy* the post-processed file to the weeklypull list folder for the given week.
                 #mylar.CONFIG.SEND2READ = will add the post-processed file to the readinglits
                 weeklypull.weekly_check(comicid, issuenum, file=(nfilename +ext), path=dst, module=module, issueid=issueid)
+
+            webp.after_import(dst, issueyear)
 
             # retrieve/create the corresponding comic objects
             if mylar.CONFIG.ENABLE_EXTRA_SCRIPTS:

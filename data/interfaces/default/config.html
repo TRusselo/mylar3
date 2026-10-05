@@ -1310,6 +1310,31 @@
                                         <input type="text" name="archive_review_dir" value="${config['archive_review_dir']}" placeholder="${config['archive_review_default']}" size="40">
                                         <small>Leave empty to use ${config['archive_review_default']}. Keep it outside the monitored folder.</small>
                                     </div>
+                                    <div class="row checkbox left clearfix">
+                                        <input type="checkbox" name="webp_on_import" value="1" ${config['webp_on_import']} /><label>Convert new downloads to WebP</label>
+                                        <small>After an issue is filed, its JPEG and PNG pages are re-encoded as WebP in the background (.cbz only). ComicInfo and every other file in the archive stay exactly as they are, pages that wouldn't get smaller stay as they are, and the file is only replaced after every page has been checked.</small>
+% if not config['webp_available']:
+                                        <small style="color:#c33;">This install of Pillow can't write WebP, so nothing will be converted.</small>
+% endif
+                                    </div>
+                                    <div class="row">
+                                        <label>Only issues dated</label>
+                                        <input type="text" name="webp_since" value="${config['webp_since']}" size="8" placeholder="any date"> or later
+                                        <small>Year (2015) or year-month (2015-06), from ComicInfo or the file name. 2015 and later are nearly all digital releases; older issues are usually print scans. Leave empty for every date.</small>
+                                    </div>
+                                    <div class="row">
+                                        <label>WebP quality</label>
+                                        <input type="number" name="webp_quality" value="${config['webp_quality']}" min="50" max="100" style="width:5em;">
+                                        <small>85 is hard to tell from the original at 100% zoom.</small>
+                                    </div>
+                                    <div class="row">
+                                        <label>Leave JPEG pages below quality</label>
+                                        <input type="number" name="webp_min_source_q" value="${config['webp_min_source_q']}" min="0" max="100" style="width:5em;">
+                                        <small>Low-quality JPEGs grow, or lose more detail, when re-encoded.</small>
+                                    </div>
+                                    <div class="row">
+                                        <a href="webpConvert">Convert comics already in your library&hellip;</a>
+                                    </div>
                                     <br/>
                                     <div class="row checkbox left clearfix">
                                         <input type="checkbox" id="enable_check_folder" onclick="initConfigCheckbox($(this));" name="enable_check_folder" value="1" ${config['enable_check_folder']} /><label>Enable Folder Monitoring<small></label>

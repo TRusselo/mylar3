@@ -1,0 +1,128 @@
+<%inherit file="base.html"/>
+<%!
+    import mylar
+%>
+
+<%def name="headerIncludes()">
+	<div id="subhead_container">
+		<div id="subhead_menu">
+			<a id="menu_link_edit" href="manage">Manage</a>
+			<a id="menu_link_edit" href="config#tabs-5">Post-processing settings</a>
+		</div>
+	</div>
+</%def>
+
+<%def name="headIncludes()">
+	<link rel="stylesheet" type="text/css" href="css/ledger.css?v=${mylar.CURRENT_VERSION}" />
+	<link rel="stylesheet" type="text/css" href="css/webp.css?v=${mylar.CURRENT_VERSION}" />
+</%def>
+
+<%def name="body()">
+<div class="lg wp">
+	<div class="lg-head">
+		<div>
+			<h1 class="lg-title">WebP conversion</h1>
+			<p class="lg-sub">Re-encode the pages of comics already in your library as WebP to save space. New downloads are handled by the option in the post-processing settings.</p>
+		</div>
+	</div>
+
+	<div class="wp-warn" role="note">
+		<b>This rewrites files in your library, and the re-encode is lossy.</b>
+		<ul>
+			<li>ComicInfo.xml and every non-page file in each archive are kept byte for byte, and no page is ever dropped. A page that can't be read, is CMYK, is a low-quality JPEG, or wouldn't get smaller stays exactly as it is.</li>
+			<li>Each new file is checked (every page decoded at the same size, page order unchanged, all other entries identical) before it replaces the original. A file that fails a check is left alone.</li>
+			<li>Keep the originals in a holding folder until you've looked through some converted issues. Only .cbz files are converted.</li>
+			<li>Pause Kavita's folder watching while this runs, and scan the library once at the end.</li>
+		</ul>
+	</div>
+
+	<form id="wp-form" class="wp-form" autocomplete="off">
+		<fieldset>
+			<legend>What to convert</legend>
+			<label class="wp-row"><span>Folder</span>
+				<input type="text" name="root" value="${defaults['root']}" size="48" required>
+			</label>
+			<label class="wp-row"><span>Only issues dated</span>
+				<span><input type="text" name="since" value="${defaults['since']}" size="8" placeholder="any date"> or later
+				<small>Year (2015) or year-month (2015-06) from ComicInfo, or the year in the file name. 2015 and later are nearly all digital releases.</small></span>
+			</label>
+			<label class="wp-check"><input type="checkbox" name="unknown" value="1"> Also convert files with no date</label>
+			<label class="wp-row"><span>Stop after</span>
+				<span><input type="number" name="limit" value="20" min="0" style="width:6em"> files
+				<small>Start with a small trial run. 0 converts every matching file.</small></span>
+			</label>
+		</fieldset>
+		<fieldset>
+			<legend>How</legend>
+			<label class="wp-row"><span>WebP quality</span>
+				<span><input type="number" name="quality" value="${defaults['quality']}" min="50" max="100" style="width:5em">
+				<small>85 is hard to tell from the original at 100% zoom.</small></span>
+			</label>
+			<label class="wp-row"><span>Leave JPEG pages below quality</span>
+				<input type="number" name="min_q" value="${defaults['min_q']}" min="0" max="100" style="width:5em">
+			</label>
+			<label class="wp-row"><span>Pages at once</span>
+				<span><input type="number" name="threads" value="${defaults['threads']}" min="1" max="8" style="width:5em">
+				<small>More is faster but leaves less CPU for everything else on the server.</small></span>
+			</label>
+			<label class="wp-row"><span>Keep the originals in</span>
+				<span><input type="text" name="backup_dir" value="${defaults['backup_dir']}" size="48" placeholder="/comics-originals">
+				<small>A folder outside the library, on a mapped volume with room for every original. Same folder layout as the library.</small></span>
+			</label>
+			<label class="wp-check wp-danger"><input type="checkbox" name="no_backup" value="1"> Don't keep the originals (the conversion can't be undone)</label>
+		</fieldset>
+		<div class="lg-build">
+			<span id="wp-hint">Preview first: it only reads your files.</span>
+			<button type="submit" class="lg-btn" id="wp-preview">Preview</button>
+		</div>
+	</form>
+
+	<div id="wp-error" class="wp-error" role="alert" hidden></div>
+
+	<section id="wp-result" hidden aria-live="polite">
+		<div class="lg-tiles" id="wp-tiles"></div>
+		<div id="wp-detail" class="wp-detail"></div>
+		<div class="lg-build" id="wp-go-bar">
+			<span id="wp-go-text"></span>
+			<button type="button" class="lg-btn" id="wp-reset">Start over</button>
+			<button type="button" class="lg-btn wp-go" id="wp-go">Convert&hellip;</button>
+		</div>
+	</section>
+
+	<section id="wp-run" hidden aria-live="polite">
+		<div class="wp-bar"><div id="wp-bar-fill"></div></div>
+		<div class="lg-tiles" id="wp-run-tiles"></div>
+		<p id="wp-current" class="wp-current"></p>
+		<ul id="wp-errors" class="wp-errors"></ul>
+		<div class="lg-build">
+			<span id="wp-run-text"></span>
+			<button type="button" class="lg-btn" id="wp-stop">Stop after this file</button>
+			<button type="button" class="lg-btn" id="wp-done" hidden>Start over</button>
+		</div>
+	</section>
+
+	<dialog id="wp-confirm1" class="wp-dialog">
+		<h2>Convert these files?</h2>
+		<div id="wp-c1-body"></div>
+		<div class="wp-dialog-actions">
+			<button type="button" class="lg-btn" data-close>Cancel</button>
+			<button type="button" class="lg-btn wp-go" id="wp-c1-next">Continue</button>
+		</div>
+	</dialog>
+
+	<dialog id="wp-confirm2" class="wp-dialog">
+		<h2>Last check</h2>
+		<p id="wp-c2-body"></p>
+		<label class="wp-row"><span>Type <b id="wp-c2-count"></b> to confirm</span>
+			<input type="text" id="wp-c2-input" inputmode="numeric" autocomplete="off" size="10"></label>
+		<div class="wp-dialog-actions">
+			<button type="button" class="lg-btn" data-close>Cancel</button>
+			<button type="button" class="lg-btn wp-go" id="wp-c2-start" disabled>Start converting</button>
+		</div>
+	</dialog>
+</div>
+</%def>
+
+<%def name="javascriptIncludes()">
+<script src="js/webp.js?v=${mylar.CURRENT_VERSION}"></script>
+</%def>

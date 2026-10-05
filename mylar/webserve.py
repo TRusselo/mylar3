@@ -55,6 +55,7 @@ from string import ascii_lowercase
 import mylar
 from mylar import (
     archives,
+    webp,
     carepackage,
     config,
     db,
@@ -4777,6 +4778,53 @@ class WebInterface(object):
         return json.dumps({'started': started, 'status': ledger.status_summary()})
     ledger_build.exposed = True
 
+    def webpConvert(self):
+        return serve_template(templatename="webp.html", title="WebP conversion",
+                              defaults=webp.options(), library=webp.default_root())
+    webpConvert.exposed = True
+
+    def webp_status(self, **kwargs):
+        cherrypy.response.headers['Content-Type'] = 'application/json'
+        return json.dumps(webp.status())
+    webp_status.exposed = True
+
+    def webp_preview(self, root=None, since=None, unknown=None, limit=None, quality=None, min_q=None,
+                     backup_dir=None, no_backup=None, threads=None, **kwargs):
+        cherrypy.response.headers['Content-Type'] = 'application/json'
+        if cherrypy.request.method != 'POST':
+            return json.dumps({'error': 'Use the WebP conversion page.'})
+        try:
+            opts = webp.options(root=root, since=since, unknown=helpers.str_to_bool(unknown), limit=limit or 0,
+                                quality=quality, min_q=min_q, backup_dir=backup_dir,
+                                no_backup=helpers.str_to_bool(no_backup), threads=threads)
+        except ValueError as e:
+            return json.dumps({'error': 'Check the numbers: %s' % e})
+        problem = webp.check_options(opts)
+        if problem:
+            return json.dumps({'error': problem})
+        if not webp.start_preview(opts):
+            return json.dumps({'error': 'A preview or conversion is already running.'})
+        return json.dumps({'started': True, 'status': webp.status()})
+    webp_preview.exposed = True
+
+    def webp_start(self, token=None, confirm=None, **kwargs):
+        cherrypy.response.headers['Content-Type'] = 'application/json'
+        if cherrypy.request.method != 'POST':
+            return json.dumps({'error': 'Use the WebP conversion page.'})
+        problem = webp.start_run(token, confirm)
+        return json.dumps({'error': problem} if problem else {'started': True, 'status': webp.status()})
+    webp_start.exposed = True
+
+    def webp_stop(self, **kwargs):
+        cherrypy.response.headers['Content-Type'] = 'application/json'
+        return json.dumps({'stopping': webp.stop(), 'status': webp.status()})
+    webp_stop.exposed = True
+
+    def webp_reset(self, **kwargs):
+        cherrypy.response.headers['Content-Type'] = 'application/json'
+        return json.dumps({'reset': webp.reset(), 'status': webp.status()})
+    webp_reset.exposed = True
+
     def ledger_status(self, **kwargs):
         cherrypy.response.headers['Content-Type'] = 'application/json'
         return json.dumps(ledger.status_summary())
@@ -7259,6 +7307,11 @@ class WebInterface(object):
                     "archive_review_dir": mylar.CONFIG.ARCHIVE_REVIEW_DIR or '',
                     "archive_review_default": archives.review_dir(),
                     "archive_auto_add": helpers.checked(mylar.CONFIG.ARCHIVE_AUTO_ADD),
+                    "webp_on_import": helpers.checked(mylar.CONFIG.WEBP_ON_IMPORT),
+                    "webp_since": mylar.CONFIG.WEBP_SINCE or '',
+                    "webp_quality": mylar.CONFIG.WEBP_QUALITY,
+                    "webp_min_source_q": mylar.CONFIG.WEBP_MIN_SOURCE_Q,
+                    "webp_available": webp.available(),
                     "check_folder": mylar.CONFIG.CHECK_FOLDER,
                     "download_scan_interval": mylar.CONFIG.DOWNLOAD_SCAN_INTERVAL,
                     "search_interval": mylar.CONFIG.SEARCH_INTERVAL,
@@ -7836,7 +7889,7 @@ class WebInterface(object):
                            'enforce_perms', 'sab_to_mylar', 'torrent_local', 'torrent_seedbox', 'rtorrent_ssl', 'rtorrent_verify', 'rtorrent_startonload', 'qbittorrent_ignore_ssl',
                            'enable_torrents', 'enable_rss', 'experimental', 'enable_torrent_search', 'enable_32p', 'enable_torznab',
                            'newznab', 'use_minsize', 'use_maxsize', 'ddump', 'failed_download_handling', 'sab_client_post_processing', 'nzbget_client_post_processing',
-                           'failed_auto', 'post_processing', 'enable_check_folder', 'archive_delete', 'archive_auto_add', 'enable_pre_scripts', 'enable_snatch_script', 'enable_extra_scripts',
+                           'failed_auto', 'post_processing', 'enable_check_folder', 'archive_delete', 'archive_auto_add', 'webp_on_import', 'enable_pre_scripts', 'enable_snatch_script', 'enable_extra_scripts',
                            'enable_meta', 'cbr2cbz_only', 'ct_tag_cr', 'ct_tag_cbl', 'ct_cbz_overwrite', 'cmtag_start_year_as_volume', 'cmtag_volume', 'setdefaultvolume',
                            'rename_files', 'replace_spaces', 'zero_level', 'sab_remove_completed', 'sab_remove_failed',
                            'lowercase_filenames', 'autowant_upcoming', 'autowant_all', 'comic_cover_local', 'cover_folder_local', 'series_metadata_local', 'alternate_latest_series_covers', 'cvinfo', 'snatchedtorrent_notify',

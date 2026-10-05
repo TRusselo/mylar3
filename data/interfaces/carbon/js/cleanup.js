@@ -25,7 +25,7 @@
     home: ['home', 'comicdetails', 'issuedetails', 'searchit', 'addcomic'],
     upcoming: ['upcoming', 'wanted'],
     pullist: ['pullist', 'futurepulllist', 'weeklypull'],
-    manage: ['manage', 'managecomics', 'manageissues', 'managefailed', 'queue_management', 'importresults'],
+    manage: ['manage', 'managecomics', 'manageissues', 'managefailed', 'queue_management', 'importresults', 'webpconvert'],
     storyarc_main: ['storyarc_main', 'detailstoryarc', 'readlist'],
     ledger: ['ledger'],
     history: ['history'],
