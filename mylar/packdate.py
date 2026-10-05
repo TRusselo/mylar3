@@ -75,12 +75,15 @@ class _Index(object):
         return best
 
     def stale(self, name, when):
-        out = []
+        newest = None
         for cid in self.byname.get(_norm(name), []):
             dates = [d for _, s, c in self.issues[cid].values() for d in (s or c,) if d]
-            if not dates or max(dates) < when - datetime.timedelta(days=7):
-                out.append(cid)
-        return out
+            last = max(dates) if dates else datetime.date.min
+            if newest is None or last > newest[0]:
+                newest = (last, cid)
+        if newest and newest[0] < when - datetime.timedelta(days=7):
+            return [newest[1]]
+        return []
 
 
 def _parse(folder, filename):
