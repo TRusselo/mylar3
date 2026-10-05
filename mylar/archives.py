@@ -141,15 +141,28 @@ def unpack_folder(folder):
 def prepare(path):
     if not path:
         return None, []
+    from mylar import packdate
     try:
         if os.path.isdir(path):
-            return None, unpack_folder(path)
+            extracted = unpack_folder(path)
+            _tag(packdate, path)
+            return None, extracted
         if os.path.isfile(path) and path.lower().endswith(ARCHIVE_EXT):
             res = unpack(path)
+            if res and res[0] == 'pack':
+                _tag(packdate, res[1])
             return res, ([res[1]] if res and res[0] == 'pack' else [])
     except Exception as e:
         logger.warn('[ARCHIVE] Unable to unpack %s: %s' % (path, e))
     return None, []
+
+
+def _tag(packdate, folder):
+    try:
+        busy('Matching issues by pack release date')
+        packdate.tag(folder)
+    except Exception as e:
+        logger.warn('[PACK-DATE] Skipped release-date matching for %s: %s' % (folder, e))
 
 
 def review_dir():
