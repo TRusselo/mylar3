@@ -40,7 +40,7 @@ cmd_list = ['getIndex', 'getComic', 'getUpcoming', 'getWanted', 'getHistory',
             'getComicInfo', 'getIssueInfo', 'getArt', 'downloadIssue', 'regenerateCovers',
             'refreshSeriesjson', 'seriesjsonListing', 'checkGlobalMessages',
             'listProviders', 'changeProvider', 'addProvider', 'delProvider',
-            'downloadNZB', 'getReadList', 'getStoryArc', 'addStoryArc', 'listAnnualSeries']
+            'downloadNZB', 'getReadList', 'getStoryArc', 'addStoryArc', 'listAnnualSeries', 'setComicLocation']
 
 class Api(object):
 
@@ -751,6 +751,25 @@ class Api(object):
             self.data = e
 
         return
+
+    def _setComicLocation(self, **kwargs):
+        if 'id' not in kwargs or not kwargs.get('location'):
+            self.data = self._failureResponse('Missing parameter: id and location are required')
+            return
+        location = os.path.normpath(kwargs['location'])
+        if not os.path.isdir(location):
+            self.data = self._failureResponse('The folder does not exist: %s' % location)
+            return
+        myDB = db.DBConnection()
+        row = myDB.selectone('SELECT ComicName, ComicYear, ComicLocation FROM comics WHERE ComicID=?', [kwargs['id']]).fetchone()
+        if not row:
+            self.data = self._failureResponse('No series with ComicID %s' % kwargs['id'])
+            return
+        myDB.upsert('comics', {'ComicLocation': location}, {'ComicID': kwargs['id']})
+        logger.info('[API] Series folder for %s (%s) changed from %s to %s' % (row['ComicName'], row['ComicYear'], row['ComicLocation'], location))
+        from mylar import updater
+        updater.forceRescan(kwargs['id'])
+        self.data = self._successResponse({'ComicID': kwargs['id'], 'old_location': row['ComicLocation'], 'location': location})
 
     def _addComic(self, **kwargs):
         if 'id' not in kwargs:

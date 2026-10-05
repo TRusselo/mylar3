@@ -47,6 +47,7 @@ pauseComic&id=$artistid (pause an comic in db)
 resumeComic&id=$artistid (resume an comic in db)
 
 refreshComic&id=$comicid (refresh info for comic in db)
+setComicLocation&id=$comicid&location=$folder (point the series at an existing folder, then recheck its files)
 
 queueIssue&id=$issueid (Mark an issue as wanted and start the search.
 unqueueIssue&id=$issueid (Unmark issue as wanted / i.e. mark as skipped)
