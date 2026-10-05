@@ -75,7 +75,8 @@
       tile(num(st.already), 'already WebP', 'skipped', 'var(--lg-before)') +
       tile(num(st.other), '.cbr / .cb7 / .pdf', 'not converted', 'var(--lg-before)');
     var lines = [];
-    lines.push('<p>Folder <code>' + esc(o.root) + '</code> &middot; WebP quality ' + o.quality + ' &middot; JPEG pages below quality ' + o.min_q + ' left as they are &middot; ' + o.threads + ' pages at once' + (o.limit ? ' &middot; <b>stops after ' + num(o.limit) + ' files</b>' : '') + '</p>');
+    lines.push('<p>Folder <code>' + esc(o.root) + '</code> &middot; WebP quality ' + o.quality + ' &middot; JPEG pages below quality ' + o.min_q + ' left as they are &middot; ' + o.threads + ' CPU threads, ' + o.files + ' files at once' + (o.limit ? ' &middot; <b>stops after ' + num(o.limit) + ' files</b>' : '') + '</p>');
+    if (o.limit && st.count >= o.limit) lines.push('<p>Looked at ' + num(st.scanned) + ' files to find the first ' + num(st.count) + ' that match, then stopped. The counts above only cover the files looked at; set "Stop after" to 0 to see the whole library.</p>');
     if (o.no_backup) lines.push('<p class="wp-danger"><b>Originals will not be kept.</b> The conversion can\'t be undone.</p>');
     else lines.push('<p>Originals go to <code>' + esc(o.backup_dir) + '</code>' + (room ? ' (' + room + ', needs about ' + gb(st.bytes) + ')' : '') + '.</p>');
     if (st.examples && st.examples.length) lines.push('<details><summary>First files</summary><ul>' + st.examples.map(function (e) { return '<li><code>' + esc(e) + '</code></li>'; }).join('') + '</ul></details>');
@@ -96,7 +97,7 @@
       tile(gb(st.saved), 'saved', st.before ? Math.round(100 * st.saved / st.before) + '% of the converted files' : '', 'var(--lg-done)') +
       tile(num(st.skipped), 'skipped', 'nothing to gain', 'var(--lg-before)') +
       tile(num(st.failed), 'left unchanged', 'a check failed', st.failed ? 'var(--lg-gap)' : 'var(--lg-before)');
-    $id('wp-current').textContent = st.state === 'running' ? (st.current ? 'Converting ' + st.current : '') : '';
+    $id('wp-current').textContent = st.state === 'running' && st.current ? 'Converting ' + st.current : '';
     $id('wp-errors').innerHTML = (st.errors || []).map(function (e) { return '<li>' + esc(e) + '</li>'; }).join('');
     var running = st.state === 'running';
     $id('wp-stop').hidden = !running;

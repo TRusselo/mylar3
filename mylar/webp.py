@@ -9,7 +9,7 @@ import threading
 import time
 import zipfile
 import zlib
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 
 import mylar
 from mylar import logger
@@ -17,6 +17,17 @@ from mylar import logger
 CONVERT_EXT = ('.jpg', '.jpeg', '.png')
 PAGE_EXT = CONVERT_EXT + ('.webp', '.gif', '.bmp', '.avif', '.jxl')
 MAX_SIDE = 16383
+
+
+def _cpus():
+    try:
+        return len(os.sched_getaffinity(0))
+    except Exception:
+        return os.cpu_count() or 4
+
+
+MAX_THREADS = max(1, _cpus())
+MAX_FILES = 8
 SAMPLE_FILES = 150
 MIN_SAVING = 0.10
 STD = (16, 11, 10, 16, 24, 40, 51, 61, 12, 12, 14, 19, 26, 58, 60, 55, 14, 13, 16, 24, 40, 57, 69, 56, 14, 17, 22, 29, 51, 87, 80, 62,
@@ -101,8 +112,14 @@ def _is_page(name):
     return name.lower().endswith(PAGE_EXT) and not name.startswith('__MACOSX') and not name.endswith('/')
 
 
-def _verify(tmp, src, converted):
+def _decoded_size(data):
     from PIL import Image
+    im = Image.open(io.BytesIO(data))
+    im.load()
+    return im.size
+
+
+def _verify(tmp, src, converted, threads=1, pool=None):
     with zipfile.ZipFile(src) as a, zipfile.ZipFile(tmp) as b:
         if b.comment != a.comment:
             return 'archive comment changed'
@@ -110,17 +127,23 @@ def _verify(tmp, src, converted):
         expect = [converted[n][0] if n in converted else n for n in old]
         if [i.filename for i in b.infolist()] != expect:
             return 'entry list changed'
+        pages = []
         for name in old:
             if name.endswith('/'):
                 continue
             if name in converted:
                 new, _, size = converted[name]
-                im = Image.open(io.BytesIO(b.read(new)))
-                im.load()
-                if im.size != size:
-                    return 'page %s has the wrong size' % new
+                pages.append((new, size, b.read(new)))
             elif a.read(name) != b.read(name):
                 return '%s changed' % name
+        ex = pool or ThreadPoolExecutor(max(1, threads))
+        try:
+            for (new, size, _), got in zip(pages, ex.map(_decoded_size, [p[2] for p in pages])):
+                if got != size:
+                    return 'page %s has the wrong size' % new
+        finally:
+            if pool is None:
+                ex.shutdown()
         back = {converted[n][0] if n in converted else n: n for n in old}
         before = sorted([n for n in old if _is_page(n)], key=_natural)
         after = [back[n] for n in sorted([n for n in expect if _is_page(n)], key=_natural)]
@@ -142,7 +165,7 @@ def _backup_target(path, backup_dir, backup_root):
     return target
 
 
-def convert(path, quality=None, min_source_q=None, backup_dir=None, backup_root=None, threads=None):
+def convert(path, quality=None, min_source_q=None, backup_dir=None, backup_root=None, threads=None, pool=None):
     quality = int(quality or _cfg('WEBP_QUALITY', 85))
     min_q = int(_cfg('WEBP_MIN_SOURCE_Q', 80) if min_source_q is None else min_source_q)
     threads = max(1, int(threads or _cfg('WEBP_THREADS', 2)))
@@ -176,13 +199,17 @@ def convert(path, quality=None, min_source_q=None, backup_dir=None, backup_root=
                     continue
                 taken.add(target)
                 work.append((info, target))
-            with ThreadPoolExecutor(threads) as ex:
+            ex = pool or ThreadPoolExecutor(threads)
+            try:
                 futures = [(info, target, ex.submit(_page, z.read(info), quality, min_q)) for info, target in work]
                 converted = {}
                 for info, target, fut in futures:
                     done, why = fut.result()
                     if done:
                         converted[info.filename] = (target, done[0], done[1])
+            finally:
+                if pool is None:
+                    ex.shutdown()
             res['converted'] = len(converted)
             res['kept'] = len(todo) - len(converted)
             if not converted:
@@ -207,7 +234,7 @@ def convert(path, quality=None, min_source_q=None, backup_dir=None, backup_root=
                         zi.create_system = info.create_system
                         zo.writestr(zi, b'' if info.filename.endswith('/') else z.read(info))
         check = {n: (v[0], None, v[2]) for n, v in converted.items()}
-        problem = _verify(tmp, path, check)
+        problem = _verify(tmp, path, check, threads, pool)
         if problem:
             return dict(res, status='failed', reason=problem)
         new_size = os.path.getsize(tmp)
@@ -553,14 +580,15 @@ def _set(**kw):
         BULK.update(kw)
 
 
-def options(root=None, since=None, unknown=False, limit=0, quality=None, min_q=None, backup_dir=None, no_backup=False, threads=None):
+def options(root=None, since=None, unknown=False, limit=0, quality=None, min_q=None, backup_dir=None, no_backup=False, threads=None, files=None):
     root = (root or default_root() or '').strip()
     return {'root': root, 'since': str(since if since is not None else _cfg('WEBP_SINCE', '2015')).strip(),
             'unknown': bool(unknown), 'limit': max(0, int(limit or 0)),
             'quality': min(100, max(50, int(quality or _cfg('WEBP_QUALITY', 85)))),
             'min_q': min(100, max(0, int(_cfg('WEBP_MIN_SOURCE_Q', 80) if min_q in (None, '') else min_q))),
             'backup_dir': '' if no_backup else (backup_dir or _cfg('WEBP_BACKUP_DIR', '') or '').strip(),
-            'no_backup': bool(no_backup), 'threads': min(8, max(1, int(threads or _cfg('WEBP_THREADS', 2))))}
+            'no_backup': bool(no_backup), 'threads': min(MAX_THREADS, max(1, int(threads or max(2, MAX_THREADS // 2)))),
+            'files': min(MAX_FILES, max(1, int(files or 4))), 'max_threads': MAX_THREADS}
 
 
 def check_options(opts):
@@ -683,32 +711,60 @@ def reset():
     return True
 
 
+def _one(path, opts):
+    with _bulk_lock:
+        BULK.setdefault('active', []).append(path)
+        BULK['current'] = ', '.join(os.path.basename(p) for p in BULK['active'])
+    try:
+        res = convert(path, quality=opts['quality'], min_source_q=opts['min_q'], threads=opts['threads'],
+                      backup_dir=opts['backup_dir'] or None, backup_root=opts['root'], pool=opts.get('pool'))
+    except Exception as e:
+        res = {'path': path, 'status': 'failed', 'reason': str(e), 'before': 0, 'after': 0}
+    _log(res, '[BULK]')
+    if res['status'] != 'skipped':
+        _journal(dict(res, source='bulk'))
+    with _bulk_lock:
+        BULK['active'].remove(path)
+        BULK['current'] = ', '.join(os.path.basename(p) for p in BULK['active'])
+        BULK['done'] += 1
+        BULK[res['status']] = BULK.get(res['status'], 0) + 1
+        if res['status'] == 'converted':
+            BULK['before'] += res['before']
+            BULK['after'] += res['after']
+            BULK['saved'] = BULK['before'] - BULK['after']
+        elif res['status'] == 'failed':
+            BULK['errors'] = (BULK['errors'] + ['%s: %s' % (os.path.relpath(path, opts['root']), res['reason'])])[-20:]
+
+
 def _run(files, opts):
-    logger.info('[WEBP] Converting %s files under %s to WebP q%s (dated %s or later)%s.' % (
-        len(files), opts['root'], opts['quality'], opts['since'] or 'any time',
+    logger.info('[WEBP] Converting %s files under %s to WebP q%s (dated %s or later), %s files at once on %s CPU threads%s.' % (
+        len(files), opts['root'], opts['quality'], opts['since'] or 'any time', opts['files'], opts['threads'],
         ', originals kept in %s' % opts['backup_dir'] if opts['backup_dir'] else ', originals NOT kept'))
     stopped = False
-    for path in files:
-        if BULK.get('stop'):
-            stopped = True
-            break
-        _set(current=path)
-        res = convert(path, quality=opts['quality'], min_source_q=opts['min_q'], threads=opts['threads'],
-                      backup_dir=opts['backup_dir'] or None, backup_root=opts['root'])
-        _log(res, '[BULK]')
-        if res['status'] != 'skipped':
-            _journal(dict(res, source='bulk'))
-        with _bulk_lock:
-            BULK['done'] += 1
-            BULK[res['status']] = BULK.get(res['status'], 0) + 1
-            if res['status'] == 'converted':
-                BULK['before'] += res['before']
-                BULK['after'] += res['after']
-                BULK['saved'] = BULK['before'] - BULK['after']
-            elif res['status'] == 'failed':
-                BULK['errors'] = (BULK['errors'] + ['%s: %s' % (os.path.relpath(path, opts['root']), res['reason'])])[-20:]
     with _bulk_lock:
-        BULK.update(state='stopped' if stopped else 'finished', current='', finished=time.time(), stop=False, files=[])
+        BULK['active'] = []
+    pool = None
+    try:
+        import multiprocessing
+        from concurrent.futures import ProcessPoolExecutor
+        pool = ProcessPoolExecutor(opts['threads'], mp_context=multiprocessing.get_context('spawn'))
+    except Exception as e:
+        logger.warn('[WEBP] Unable to start worker processes, using threads instead: %s' % e)
+    opts = dict(opts, pool=pool)
+    with ThreadPoolExecutor(opts['files']) as ex:
+        pending = set()
+        for path in files:
+            if BULK.get('stop'):
+                stopped = True
+                break
+            while len(pending) >= opts['files']:
+                done, pending = wait(pending, return_when=FIRST_COMPLETED)
+            pending.add(ex.submit(_one, path, opts))
+        wait(pending)
+    if pool is not None:
+        pool.shutdown()
+    with _bulk_lock:
+        BULK.update(state='stopped' if stopped else 'finished', current='', active=[], finished=time.time(), stop=False, files=[])
         snap = dict(BULK)
     logger.info('[WEBP] %s: %s converted, %s skipped, %s failed, %s saved.' % (
         'Stopped' if stopped else 'Finished', snap['converted'], snap['skipped'], snap['failed'], _mb(snap['saved'])))

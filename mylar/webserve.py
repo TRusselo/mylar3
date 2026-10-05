@@ -4790,14 +4790,14 @@ class WebInterface(object):
     webp_status.exposed = True
 
     def webp_preview(self, root=None, since=None, unknown=None, limit=None, quality=None, min_q=None,
-                     backup_dir=None, no_backup=None, threads=None, **kwargs):
+                     backup_dir=None, no_backup=None, threads=None, files=None, **kwargs):
         cherrypy.response.headers['Content-Type'] = 'application/json'
         if cherrypy.request.method != 'POST':
             return json.dumps({'error': 'Use the WebP conversion page.'})
         try:
             opts = webp.options(root=root, since=since, unknown=helpers.str_to_bool(unknown), limit=limit or 0,
                                 quality=quality, min_q=min_q, backup_dir=backup_dir,
-                                no_backup=helpers.str_to_bool(no_backup), threads=threads)
+                                no_backup=helpers.str_to_bool(no_backup), threads=threads, files=files)
         except ValueError as e:
             return json.dumps({'error': 'Check the numbers: %s' % e})
         problem = webp.check_options(opts)
