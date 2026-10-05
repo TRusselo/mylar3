@@ -222,3 +222,77 @@ def test_small_saving_leaves_file_untouched(tmp_path):
     original = sha(src)
     res = webp.convert(src)
     assert res['status'] == 'skipped' and 'less than' in res['reason'] and sha(src) == original
+
+
+RAR = os.path.join(os.path.dirname(__file__), 'data', 'rar')
+
+
+def rar_copy(tmp_path, name, as_name):
+    import shutil
+    dst = tmp_path / as_name
+    shutil.copy(os.path.join(RAR, name), str(dst))
+    return str(dst)
+
+
+def rar_contents(path):
+    from lib.rarfile import rarfile
+    with rarfile.RarFile(path) as rf:
+        return {i.filename: rf.read(i) for i in rf.infolist() if not i.is_dir()}, rf.comment
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize('fixture', ['rar3-subdirs.rar', 'rar5-solid.rar', 'rar3-comment-plain.rar'])
+def test_rar_is_repacked_entry_for_entry(tmp_path, fixture):
+    src = rar_copy(tmp_path, fixture, 'Hero 001 (2019).cbr')
+    before, comment = rar_contents(src)
+    res = webp.to_cbz(src)
+    assert res['status'] == 'converted' and res['repacked'], res
+    assert not os.path.exists(src) and res['target'] == str(tmp_path / 'Hero 001 (2019).cbz')
+    after, zcomment, _ = entries(res['target'])
+    assert after == before
+    if comment:
+        assert zcomment.decode() == comment
+    assert sorted(os.listdir(tmp_path)) == ['Hero 001 (2019).cbz', 'cache']
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize('fixture,why', [('rar5-psw.rar', 'password'), ('corrupt-data.rar', ''), ('rar5-evil-symlink-traversal.rar', 'unsafe')])
+def test_bad_rar_is_left_alone(tmp_path, fixture, why):
+    src = rar_copy(tmp_path, fixture, 'Hero 002 (2019).cbr')
+    original = sha(src)
+    res = webp.to_cbz(src)
+    assert res['status'] == 'failed' and why in res['reason'], res
+    assert sha(src) == original and sorted(os.listdir(tmp_path)) == ['Hero 002 (2019).cbr', 'cache']
+
+
+@pytest.mark.unit
+def test_existing_cbz_blocks_repack(tmp_path):
+    src = rar_copy(tmp_path, 'rar5-solid.rar', 'Hero 003 (2019).cbr')
+    (tmp_path / 'Hero 003 (2019).cbz').write_bytes(b'mine')
+    res = webp.to_cbz(src)
+    assert res['status'] == 'skipped' and os.path.exists(src) and (tmp_path / 'Hero 003 (2019).cbz').read_bytes() == b'mine'
+
+
+@pytest.mark.unit
+def test_zip_named_cbr_is_renamed_then_converted(tmp_path, monkeypatch):
+    moved = []
+    monkeypatch.setattr(webp, '_relocate', lambda old, new: moved.append((old, new)))
+    src = make_cbz(tmp_path / 'Hero 004 (2019).cbr', [('001.jpg', jpeg(page(seed=1))), ('002.jpg', jpeg(page(seed=2)))])
+    before, _, _ = entries(src)
+    res = webp._process(src)
+    target = str(tmp_path / 'Hero 004 (2019).cbz')
+    assert moved == [(src, target)] and not os.path.exists(src)
+    assert res['status'] == 'converted' and res['path'] == target
+    after, _, order = entries(target)
+    assert after['ComicInfo.xml'] == before['ComicInfo.xml'] and order == ['001.webp', '002.webp', 'ComicInfo.xml']
+
+
+@pytest.mark.unit
+def test_import_hook_accepts_cbr(tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(webp, '_enqueue', lambda path: calls.append(path))
+    new = rar_copy(tmp_path, 'rar5-solid.rar', 'Hero 005 (2021).cbr')
+    old = rar_copy(tmp_path, 'rar5-solid.rar', 'Hero 006 (1988).cbr')
+    webp.after_import(new)
+    webp.after_import(old)
+    assert calls == [new]

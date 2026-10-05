@@ -16,7 +16,7 @@ from packaging.version import parse as parse_version
 from subprocess import CalledProcessError, check_output
 import mylar
 
-from mylar import logger, notifiers
+from mylar import logger, notifiers, comicinfo
 
 
 def run(dirName, nzbName=None, issueid=None, comversion=None, manual=None, filename=None, module=None, manualmeta=False, readingorder=None, agerating=None):
@@ -63,6 +63,8 @@ def run(dirName, nzbName=None, issueid=None, comversion=None, manual=None, filen
 
         filepath = new_filepath
         original_perms = os.stat(filepath).st_mode
+        original_cix = comicinfo.read_raw(og_filepath)
+        tag_mode = comicinfo.tag_mode()
     except Exception as e:
         logger.warn('%s Unexpected Error: %s [%s]' % (module, sys.exc_info()[0], e))
         logger.warn(module + ' Unable to create temporary directory to perform meta-tagging. Processing without metatagging.')
@@ -188,13 +190,13 @@ def run(dirName, nzbName=None, issueid=None, comversion=None, manual=None, filen
         tidyup(filepath, new_filepath, new_folder, manualmeta)
         return "fail"
 
-    #if it's a cbz file - check if no-overwrite existing tags is enabled / disabled in config.
-    if filename.endswith('.cbz'):
-        if mylar.CONFIG.CT_CBZ_OVERWRITE:
-            logger.fdebug(module + ' Will modify existing tag blocks even if it exists.')
-        else:
-            logger.fdebug(module + ' Will NOT modify existing tag blocks even if they exist already.')
-            tagoptions.extend(["--nooverwrite"])
+    if tag_mode == 'skip':
+        logger.fdebug(module + ' Will NOT modify existing tag blocks even if they exist already.')
+        tagoptions.extend(["--nooverwrite"])
+    elif tag_mode == 'fill':
+        logger.fdebug(module + ' Will fill in missing tags and keep every existing value.')
+    else:
+        logger.fdebug(module + ' Will overwrite existing tags with ComicVine data.')
 
     if issueid is None:
         tagoptions.extend(["-f", "-o"])
@@ -341,6 +343,11 @@ def run(dirName, nzbName=None, issueid=None, comversion=None, manual=None, filen
             return "fail"
         if mylar.CONFIG.CBR2CBZ_ONLY and initial_ctrun == False:
             break
+
+    if not comicinfo.keep_existing(original_cix, filepath, tag_mode):
+        logger.warn('%s Unable to merge the new tags with the existing ones - filing the file without tagging.' % module)
+        tidyup(og_filepath, new_filepath, new_folder, manualmeta)
+        return "fail"
 
     return filepath
 

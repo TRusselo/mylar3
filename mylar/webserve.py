@@ -53,6 +53,7 @@ import xml.etree.ElementTree as ET
 from string import ascii_lowercase
 
 import mylar
+from mylar.comicinfo import tag_mode as ct_tag_mode
 from mylar import (
     archives,
     webp,
@@ -7535,6 +7536,7 @@ class WebInterface(object):
                     "ct_tag_cr": helpers.checked(mylar.CONFIG.CT_TAG_CR),
                     "ct_tag_cbl": helpers.checked(mylar.CONFIG.CT_TAG_CBL),
                     "ct_cbz_overwrite": helpers.checked(mylar.CONFIG.CT_CBZ_OVERWRITE),
+                    "ct_tag_mode": ct_tag_mode(),
                     "cmtag_volume": helpers.checked(mylar.CONFIG.CMTAG_VOLUME),
                     "ct_notes_format": mylar.CONFIG.CT_NOTES_FORMAT,
                     "unrar_cmd": mylar.CONFIG.UNRAR_CMD,

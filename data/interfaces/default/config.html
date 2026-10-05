@@ -1430,8 +1430,14 @@
                                             <div class="row checkbox left clearfix">
                                                     <input id="ct_tag_cbl" type="checkbox" name="ct_tag_cbl" disabled value="1" ${config['ct_tag_cbl']} /><label>Write ComicBookLover (Cbl) tags (zip comment)</label>
                                             </div>
-                                            <div class="row checkbox left clearfix">
-                                                    <input type="checkbox" name="ct_cbz_overwrite" value="1" ${config['ct_cbz_overwrite']} /><label>Overwrite existing cbz tags (if they exist)</label>
+                                            <div class="row">
+                                                    <label>When a file already has tags</label>
+                                                    <select name="ct_tag_mode">
+                                                        <option value="fill" ${'selected' if config['ct_tag_mode'] == 'fill' else ''}>Fill in missing tags, keep every existing value</option>
+                                                        <option value="skip" ${'selected' if config['ct_tag_mode'] == 'skip' else ''}>Leave the file's tags alone</option>
+                                                        <option value="overwrite" ${'selected' if config['ct_tag_mode'] == 'overwrite' else ''}>Overwrite them with ComicVine data</option>
+                                                    </select>
+                                                    <small>Fill and overwrite both keep fields ComicTagger can't write, such as Pages, Tags and GTIN.</small>
                                             </div>
                                             <div style="text-align:right;">
                                                 <a href="#" onclick="show_advanced_meta()"><span id="show_meta_advanced">Show Advanced</span></a>

@@ -8,6 +8,7 @@ import shutil
 import threading
 import time
 import zipfile
+import zlib
 from concurrent.futures import ThreadPoolExecutor
 
 import mylar
@@ -282,10 +283,15 @@ def _log(res, label):
 
 
 def issue_date(path):
+    text = ''
     try:
-        with zipfile.ZipFile(path) as z:
-            ci = next((i for i in z.infolist() if i.filename.lower().rsplit('/', 1)[-1] == 'comicinfo.xml'), None)
-            text = z.read(ci).decode('utf-8', 'ignore') if ci and ci.file_size < 2000000 else ''
+        if zipfile.is_zipfile(path):
+            with zipfile.ZipFile(path) as z:
+                ci = next((i for i in z.infolist() if i.filename.lower().rsplit('/', 1)[-1] == 'comicinfo.xml'), None)
+                text = z.read(ci).decode('utf-8', 'ignore') if ci and ci.file_size < 2000000 else ''
+        else:
+            from mylar import comicinfo
+            text = (comicinfo.read_raw(path) or b'').decode('utf-8', 'ignore')
     except Exception:
         text = ''
     year = re.search(r'<Year>\s*(\d{4})\s*</Year>', text)
@@ -316,10 +322,130 @@ def on_or_after(date, since, unknown=False):
     return bool(date[1]) and date[1] >= cut[1]
 
 
+def _pp_lock():
+    try:
+        from mylar.PostProcessor import PP_LOCK
+        return PP_LOCK
+    except Exception:
+        return threading.RLock()
+
+
+def _safe_name(name):
+    parts = name.replace('\\', '/').split('/')
+    return not name.startswith(('/', '\\')) and '..' not in parts and ':' not in parts[0]
+
+
+def _zip_time(dt):
+    try:
+        dt = tuple(int(x) for x in dt[:6])
+        return dt if dt[0] >= 1980 else (1980, 1, 1, 0, 0, 0)
+    except Exception:
+        return (1980, 1, 1, 0, 0, 0)
+
+
+def _repack_rar(path, tmp):
+    from lib.rarfile import rarfile
+    with rarfile.RarFile(path) as rf:
+        if rf.needs_password():
+            return 'password protected'
+        infos = [i for i in rf.infolist() if not i.is_dir()]
+        if not infos:
+            return 'empty archive'
+        names = [i.filename for i in infos]
+        if len(set(names)) != len(names):
+            return 'duplicate names in the archive'
+        for i in infos:
+            if i.is_symlink() or not _safe_name(i.filename):
+                return 'unsafe entry %s' % i.filename
+        sums = {}
+        with zipfile.ZipFile(tmp, 'w', allowZip64=True) as zo:
+            if rf.comment:
+                zo.comment = rf.comment.encode('utf-8')[:65535]
+            for i in infos:
+                data = rf.read(i)
+                if len(data) != i.file_size:
+                    return '%s is incomplete' % i.filename
+                zi = zipfile.ZipInfo(i.filename, date_time=_zip_time(i.date_time))
+                zi.compress_type = zipfile.ZIP_STORED if _is_page(i.filename) else zipfile.ZIP_DEFLATED
+                zo.writestr(zi, data)
+                sums[i.filename] = (len(data), zlib.crc32(data))
+    with zipfile.ZipFile(tmp) as z:
+        if [i.filename for i in z.infolist()] != names:
+            return 'entry list changed'
+        for name in names:
+            data = z.read(name)
+            if (len(data), zlib.crc32(data)) != sums[name]:
+                return '%s changed' % name
+    return None
+
+
+def _relocate(old, new):
+    try:
+        from mylar import db
+        myDB = db.DBConnection()
+        folder = os.path.dirname(old)
+        for table in ('issues', 'annuals'):
+            myDB.action('UPDATE %s SET Location=? WHERE Location=? AND ComicID IN '
+                        '(SELECT ComicID FROM comics WHERE ComicLocation IN (?, ?))' % table,
+                        [os.path.basename(new), os.path.basename(old), folder, folder + os.sep])
+        myDB.action('UPDATE storyarcs SET Location=? WHERE Location=?', [new, old])
+    except Exception as e:
+        logger.warn('[WEBP] Renamed %s to .cbz but could not update the database: %s' % (os.path.basename(old), e))
+
+
+def to_cbz(path):
+    target = os.path.splitext(path)[0] + '.cbz'
+    res = {'path': path, 'target': target, 'status': 'failed', 'reason': '', 'repacked': False}
+    try:
+        st = os.stat(path)
+    except OSError as e:
+        return dict(res, reason='missing: %s' % e)
+    if os.path.exists(target):
+        return dict(res, status='skipped', reason='%s already exists' % os.path.basename(target))
+    tmp = os.path.join(os.path.dirname(path), '.%s.cbz-tmp' % os.path.basename(target))
+    try:
+        if not zipfile.is_zipfile(path):
+            from lib.rarfile import rarfile
+            if not rarfile.is_rarfile(path):
+                return dict(res, status='skipped', reason='not a rar or zip archive')
+            if shutil.disk_usage(os.path.dirname(path)).free < st.st_size * 1.2:
+                return dict(res, reason='not enough free space')
+            problem = _repack_rar(path, tmp)
+            if problem:
+                return dict(res, reason=problem)
+            res['repacked'] = True
+        with _pp_lock():
+            now = os.stat(path)
+            if (now.st_size, now.st_mtime) != (st.st_size, st.st_mtime):
+                return dict(res, reason='file changed while repacking')
+            if os.path.exists(target):
+                return dict(res, status='skipped', reason='%s already exists' % os.path.basename(target))
+            if res['repacked']:
+                shutil.copymode(path, tmp)
+                try:
+                    os.chown(tmp, st.st_uid, st.st_gid)
+                except Exception:
+                    pass
+                os.rename(tmp, target)
+                os.remove(path)
+            else:
+                os.rename(path, target)
+            _relocate(path, target)
+        return dict(res, status='converted')
+    except Exception as e:
+        return dict(res, reason='%s: %s' % (type(e).__name__, e))
+    finally:
+        if os.path.exists(tmp):
+            try:
+                os.remove(tmp)
+            except OSError:
+                pass
+
+
 def after_import(path, issueyear=None):
     if not _cfg('WEBP_ON_IMPORT', False) or not path:
         return
-    if not path.lower().endswith('.cbz'):
+    if not path.lower().endswith(('.cbz', '.cbr')):
         return
     date = issue_date(path)
     if date is None and str(issueyear or '')[:4].isdigit():
@@ -345,15 +471,30 @@ def _drain():
         except queue.Empty:
             return
         try:
-            if not available():
-                logger.warn('[WEBP] This install of Pillow cannot write WebP - leaving %s as it is.' % os.path.basename(path))
-                continue
-            res = convert(path)
-            _log(res, '[IMPORT]')
-            if res['status'] != 'skipped':
-                _journal(dict(res, source='import'))
+            _process(path)
         except Exception as e:
             logger.warn('[WEBP] Unable to convert %s: %s' % (path, e))
+
+
+def _process(path):
+    if not available():
+        logger.warn('[WEBP] This install of Pillow cannot write WebP - leaving %s as it is.' % os.path.basename(path))
+        return None
+    if path.lower().endswith('.cbr'):
+        rp = to_cbz(path)
+        if rp['status'] != 'converted':
+            logger.warn('[WEBP][IMPORT] %s was left as a .cbr: %s' % (os.path.basename(path), rp['reason']))
+            _journal(dict(rp, source='import-cbz'))
+            return rp
+        logger.info('[WEBP][IMPORT] %s %s to %s before converting.' % (
+            'Repacked' if rp['repacked'] else 'Renamed', os.path.basename(path), os.path.basename(rp['target'])))
+        _journal(dict(rp, source='import-cbz'))
+        path = rp['target']
+    res = convert(path)
+    _log(res, '[IMPORT]')
+    if res['status'] != 'skipped':
+        _journal(dict(res, source='import'))
+    return res
 
 
 def default_root():
