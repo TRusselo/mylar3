@@ -3795,6 +3795,8 @@ class WebInterface(object):
             if countchk == 0:
                 return json.dumps({'status': True, 'message': 'Queue already cleared - there was nothing to clear from the Queue'})
 
+            for row in myDB.select("SELECT id FROM ddl_info WHERE status = 'Queued'"):
+                mylar.DDL_CANCEL.add(str(row['id']))
             myDB.action("DELETE FROM ddl_info WHERE status = 'Queued'")
             return json.dumps({'status': True, 'message': 'Successfully cleared %s items from the Queue' % countchk})
 
@@ -3862,13 +3864,16 @@ class WebInterface(object):
                     logger.fdebug('resume set to resume at: %s bytes' % filesize)
                     resume = filesize
                 elif mode == 'abort':
+                    mylar.DDL_CANCEL.add(str(item['id']))
                     myDB.upsert("ddl_info", {'Status': 'Failed'}, {'id': id}) #DELETE FROM ddl_info where ID=?', [id])
                     continue
                 elif mode == 'remove':
+                    mylar.DDL_CANCEL.add(str(item['id']))
                     myDB.action('DELETE FROM ddl_info where ID=?', [id])
                     continue
                 else:
                     resume = None
+                mylar.DDL_CANCEL.discard(str(item['id']))
                 mylar.DDL_QUEUE.put({'link': item['link'],
                                      'mainlink': item['mainlink'],
                                      'series': item['series'],

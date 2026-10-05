@@ -36,6 +36,10 @@ from mylar.downloaders.jdownloader2 import JDownloader2
 FILE_CLEARANCE = {}
 
 
+
+class DownloadCancelled(Exception):
+    pass
+
 class GC(object):
 
     def cookie_receipt(self, main_url=None):
@@ -1397,10 +1401,11 @@ class GC(object):
                 t.headers['Accept-encoding'] = 'gzip'
                 if resume is not None:
                     with open(dst_path, 'ab') as f:
-                        for chunk in t.iter_content(chunk_size=1024):
+                        for chunk in t.iter_content(chunk_size=65536):
+                            if str(id) in mylar.DDL_CANCEL:
+                                raise DownloadCancelled()
                             if chunk:
                                 f.write(chunk)
-                                f.flush()
 
                 else:
                     if os.path.exists(dst_path):
@@ -1417,10 +1422,25 @@ class GC(object):
                             )
 
                     with open(dst_path, 'wb') as f:
-                        for chunk in t.iter_content(chunk_size=1024):
+                        for chunk in t.iter_content(chunk_size=65536):
+                            if str(id) in mylar.DDL_CANCEL:
+                                raise DownloadCancelled()
                             if chunk:
                                 f.write(chunk)
-                                f.flush()
+
+        except DownloadCancelled:
+            logger.info('[DDL-ABORT] Stopped downloading %s - it was aborted or removed from the queue.' % filename)
+            mylar.DDL_LOCK = False
+            try:
+                os.remove(dst_path)
+            except Exception:
+                pass
+            return {
+               "success": False,
+               "cancelled": True,
+               "filename": filename,
+               "path": None,
+               "link_type": link_type}
 
         except requests.exceptions.Timeout as e:
             logger.error('[ERROR] download has timed out due to inactivity...: %s', e)

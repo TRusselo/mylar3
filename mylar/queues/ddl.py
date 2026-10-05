@@ -46,6 +46,9 @@ def ddl_process(myDB, item, link_type_failure):
     except Exception:
         pass
 
+    if ddl_cancelled(item):
+        return
+
     logger.info('Now loading request from DDL queue: %s' % item['series'])
 
     ctrlval = {'id':      item['id']}
@@ -80,6 +83,9 @@ def ddl_process(myDB, item, link_type_failure):
     elif item['site'] == 'DDL(External)':
         meganz = mega.MegaNZ()
         ddzstat = meganz.ddl_download(item['link'], item['filename'], item['id'], item['issueid'], item['link_type'])
+
+    if ddzstat.get('cancelled') or ddl_cancelled(item, ddzstat):
+        return
 
     if ddzstat['success'] and ddzstat['filename'] is not None:
         filecondition = helpers.check_file_condition(ddzstat['path'])
@@ -168,6 +174,24 @@ def ddl_process(myDB, item, link_type_failure):
             logger.info('[Status: %s] Failed to download item from %s : %s ' % (ddzstat['success'], item['site'], ddzstat))
             myDB.action('DELETE FROM ddl_info where id=?', [item['id']])
             mylar.search.FailedMark(item['issueid'], item['comicid'], item['id'], ddzstat['filename'], item['site'], retry=True)
+
+
+def ddl_cancelled(item, ddzstat=None):
+    if str(item['id']) not in mylar.DDL_CANCEL:
+        if ddzstat is None or not ddzstat.get('cancelled'):
+            return False
+    mylar.DDL_CANCEL.discard(str(item['id']))
+    logger.info('[DDL-ABORT] Dropped %s - it was aborted or removed from the queue.' % item['series'])
+    if ddzstat and ddzstat.get('success') and ddzstat.get('path'):
+        logger.info('[DDL-ABORT] The finished download was left at %s and will not be post-processed.' % ddzstat['path'])
+    helpers.reverse_the_pack_snatch(item['id'], item['comicid'])
+    for x, y in dict(mylar.PACK_ISSUEIDS_DONT_QUEUE).items():
+        if y == item['id']:
+            del mylar.PACK_ISSUEIDS_DONT_QUEUE[x]
+    if item['id'] in mylar.DDL_QUEUED:
+        mylar.DDL_QUEUED.remove(item['id'])
+    ddl_cleanup(item['id'])
+    return True
 
 
 def ddl_give_up(myDB, item, ctrlval, link_type_failure):
