@@ -237,7 +237,7 @@
     }).join('') : '<tr><td class="lg-empty" colspan="7">' + (C.trades.length ? 'No trades match these filters.' : 'Trade contents haven\'t been read yet. Use the button above.') + '</td></tr>');
     $id('lg-count').textContent = fmt(Math.min(st.limit, f.length)) + ' of ' + fmt(f.length) + ' trades';
     $id('lg-more').hidden = f.length <= st.limit;
-    $id('lg-note').textContent = KEYS + ' Contents come from each trade\'s ComicVine description and, when a Metron token is set, Metron\'s reprint list. Trades neither source describes can\'t be checked. Select trades to want or skip the trade itself, want or ignore the singles it collects that you\'re missing, or move the singles it duplicates out of your library.';
+    $id('lg-note').textContent = KEYS + ' Contents come from each trade\'s ComicVine description and the summary saved in the trade file. Trades neither describes can\'t be checked. Select trades to want or skip the trade itself, want or ignore the singles it collects that you\'re missing, or move the singles it duplicates out of your library.';
   }
 
   $('#lg-table').on('click', '[data-open]', function () { var k = this.getAttribute('data-open'); st.open[k] = !st.open[k]; render(); });
@@ -354,7 +354,7 @@
     var t;
     if (s.running) t = (s.phase || 'Working') + ': ' + fmt(s.done) + ' of ' + fmt(s.total) + ' trades';
     else if (s.error) t = 'Last read failed: ' + s.error;
-    else if (s.stored) t = fmt(s.stored) + ' trades read, last on ' + s.updated + '. Sources: ComicVine, the summaries in your trade files (' + fmt(s.comicinfo_found || 0) + ')' + (s.metron ? ' and Metron (' + fmt(s.metron_found || 0) + ').' : '.');
+    else if (s.stored) t = fmt(s.stored) + ' trades read, last on ' + s.updated + '. Sources: ComicVine and the summaries in your trade files (' + fmt(s.comicinfo_found || 0) + ').';
     else t = 'Trade contents haven\'t been read yet.';
     if (!s.running && s.note) t += ' ' + s.note;
     $id('lg-build-text').textContent = t;

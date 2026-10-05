@@ -4788,11 +4788,6 @@ class WebInterface(object):
         return json.dumps(ddlsources.pixeldrain_status(force=helpers.str_to_bool(force), key=key))
     pixeldrain_status.exposed = True
 
-    def metron_test(self, token='', **kwargs):
-        cherrypy.response.headers['Content-Type'] = 'application/json'
-        return json.dumps(ledger.metron_test(token))
-    metron_test.exposed = True
-
     def ledger_cutoff(self, cutoff='', **kwargs):
         cherrypy.response.headers['Content-Type'] = 'application/json'
         cutoff = cutoff.strip()
@@ -7237,8 +7232,6 @@ class WebInterface(object):
 
         config = {
                     "comicvine_api": mylar.CONFIG.COMICVINE_API,
-                    "metron_api_token": mylar.CONFIG.METRON_API_TOKEN if mylar.CONFIG.METRON_API_TOKEN not in (None, 'None') else '',
-                    "metron_env": bool(os.environ.get('METRON_API_TOKEN')),
                     "ddl_sources_json": json.dumps(ddlsources.all_sources()),
                     "pixeldrain_api_key": mylar.CONFIG.PIXELDRAIN_API_KEY if mylar.CONFIG.PIXELDRAIN_API_KEY not in (None, 'None') else '',
                     "pixeldrain_env": bool(os.environ.get('PIXELDRAIN_API_KEY')),

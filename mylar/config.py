@@ -41,7 +41,6 @@ _CONFIG_DEFINITIONS = OrderedDict({
     'REFRESH_CACHE': (int, 'General', 7),
     'ANNUALS_ON': (bool, 'General', False),
     'LEDGER_CUTOFF': (str, 'General', ''),
-    'METRON_API_TOKEN': (str, 'Metron', None),
     'DDL_DISABLED_SOURCES': (str, 'DDL', '[]'),
     'PIXELDRAIN_API_KEY': (str, 'DDL', None),
     'DDL_MAIN_LARGE_LAST': (bool, 'DDL', False),
