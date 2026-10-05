@@ -19,6 +19,7 @@
             </div>
             <div style="text-align:center;">
              <h2><center><bold>ACTIVE</bold></center></h2>
+              <div id="queue_counts" style="text-align:center;margin:4px 0 10px;opacity:.85;"></div>
               <div id="active_message" align="center" style="display:none;">
                   <div id="amessage" align="center"></div>
               </div>
@@ -85,7 +86,28 @@
         <script src="js/libs/full_numbers_no_ellipses.js"></script>
         <script>
         var ImportTimer = setInterval(activecheck, 5000);
+        var lastCounts = '';
+        function showCounts(obj) {
+                var c = obj['counts'] || {};
+                var parts = [];
+                ['Downloading', 'Queued', 'Incomplete', 'Failed', 'Completed'].forEach(function (k) {
+                    if (c[k]) parts.push(c[k] + ' ' + k.toLowerCase());
+                });
+                var html = parts.join(' &middot; ');
+                if (c['Queued'] && !obj['waiting'] && obj['status'] != 'Downloading') {
+                    html += ' &mdash; <b>queue looks stalled</b>, <a href="#" onclick="doAjaxCall(\'ddl_requeue?mode=restart_queue\',$(this),\'table\');return false;">restart it</a>';
+                }
+                $('#queue_counts').html(html);
+                var key = JSON.stringify(c) + obj['a_id'];
+                if (key != lastCounts) {
+                    lastCounts = key;
+                    if ($.fn.dataTable.isDataTable('#queue_table')) {
+                        $('#queue_table').DataTable().ajax.reload(null, false);
+                    }
+                }
+        };
         function activecheck() {
+                if (document.hidden) { return; }
                 $.get('check_ActiveDDL',
                     function(data){
                         if (data.error != undefined) {
@@ -93,6 +115,7 @@
                             return;
                         };
                         var obj = JSON.parse(data);
+                        showCounts(obj);
                         var percent = obj['percent'];
                         var status = obj['status'];
                         var aid = obj['a_id'];
@@ -150,11 +173,6 @@
                             document.getElementById("amessage").innerHTML = status;
                             document.getElementById("aresume_ddl").style.display = "block";
                         }
-                        if (percent == '100%') {
-                            clearInterval(ImportTimer);
-                            $('#queue_table').DataTable().ajax.reload(null, false);
-                            ImportTimer = setInterval(activecheck, 5000);
-                        }
                 });
         };
         function ajaxcallit(qmode, queueid) {
@@ -196,7 +214,7 @@
                     "preDrawCallback": function (settings){
                         pageScrollPos = $('#queue_table div.datatables_scrollBody').scrollTop();
                     },
-                    "processing": true,
+                    "processing": false,
                     "serverSide": true,
                     "ajaxSource": 'queueManageIt',
                     "paginationType": "full_numbers",
@@ -305,8 +323,6 @@
                          return nRow;
                      },
                      "drawCallback": function (o) {
-                         // Jump to top of page
-                         $('html,body').scrollTop(0);
                          $('#queue_table div.dataTables_scrollBody').scrollTop(pageScrollPos);
                      },
                      "serverData": function ( sSource, aoData, fnCallback ) {
@@ -324,6 +340,7 @@
         };
         $(document).ready(function() {       
             initThisPage();
+            document.addEventListener('visibilitychange', function () { if (!document.hidden) { activecheck(); } });
         });
         </script>
 </%def>

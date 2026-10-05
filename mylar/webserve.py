@@ -3801,7 +3801,7 @@ class WebInterface(object):
             return json.dumps({'status': True, 'message': 'Successfully cleared %s items from the Queue' % countchk})
 
         if id is None:
-            items = myDB.select("SELECT * FROM ddl_info WHERE status = 'Queued' ORDER BY updated_date DESC")
+            items = myDB.select("SELECT * FROM ddl_info WHERE status = 'Queued' AND jd2_job_id IS NULL ORDER BY updated_date ASC")
         else:
             oneitem = myDB.selectone("SELECT * FROM DDL_INFO WHERE ID=?", [id]).fetchone()
             items = [oneitem]
@@ -3837,6 +3837,9 @@ class WebInterface(object):
                              'site': x['site'],
                              'id': x['id']})
 
+        from mylar.queues.ddl import waiting_ids
+        waiting = waiting_ids()
+        added, already = 0, 0
         if itemlist is not None:
             for item in itemlist:
                 seriesname = item['series']
@@ -3873,7 +3876,11 @@ class WebInterface(object):
                     continue
                 else:
                     resume = None
+                if str(item['id']) in waiting:
+                    already += 1
+                    continue
                 mylar.DDL_CANCEL.discard(str(item['id']))
+                added += 1
                 mylar.DDL_QUEUE.put({'link': item['link'],
                                      'mainlink': item['mainlink'],
                                      'series': item['series'],
@@ -3894,8 +3901,10 @@ class WebInterface(object):
                 linemessage = '%s successful for %s' % (mode, item['series'])
 
             if mode == 'restart_queue':
-                logger.info('[DDL-RESTART-QUEUE] DDL Queue successfully restarted. Put %s items back into the queue for downloading..' % len(itemlist))
-                linemessage = 'Successfully restarted Queue'
+                logger.info('[DDL-RESTART-QUEUE] DDL Queue successfully restarted. Put %s items back into the queue for downloading (%s were already queued)..' % (added, already))
+                linemessage = 'Restarted the queue: %s added, %s already queued' % (added, already)
+            elif mode in ('restart', 'resume', 'requeue') and already:
+                linemessage = '%s is already queued or downloading - abort it first to start it over' % seriesname
             elif mode == 'restart':
                 logger.info('[DDL-RESTART] Successfully restarted %s [%s] for downloading..' % (seriesname, seriessize))
                 linemessage = 'Successfully restarted %s [%s]' % (seriesname, seriessize)
@@ -9248,6 +9257,14 @@ class WebInterface(object):
     test_32p.exposed = True
 
     def check_ActiveDDL(self):
+        out = json.loads(self._active_ddl())
+        myDB = db.DBConnection()
+        out['counts'] = {r['status']: r['count'] for r in myDB.select("SELECT status, count(*) AS count FROM ddl_info GROUP BY status")}
+        out['waiting'] = mylar.DDL_QUEUE.qsize()
+        return json.dumps(out)
+    check_ActiveDDL.exposed = True
+
+    def _active_ddl(self):
          myDB = db.DBConnection()
          active = myDB.selectone("SELECT * FROM DDL_INFO WHERE STATUS = 'Downloading'").fetchone()
          if active is None:
@@ -9297,7 +9314,6 @@ class WebInterface(object):
                  statline = 'No filename assigned for %s.</br> This was probably never started successfully - you should restart the download (use the option in the GUI)' % infoline
              return json.dumps({'a_id': active['id'], 'status': statline, 'percent': 0})
 
-    check_ActiveDDL.exposed = True
 
     def create_readlist(self, list=None, weeknumber=None, year=None):
         #                                 ({

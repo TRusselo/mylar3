@@ -11,9 +11,33 @@ from mylar import db, getcomics
 from mylar.downloaders import mediafire, mega, pixeldrain
 
 
+ACTIVE = [None]
+
+
+def waiting_ids():
+    with mylar.DDL_QUEUE.mutex:
+        ids = {str(i.get('id')) for i in list(mylar.DDL_QUEUE.queue) if isinstance(i, dict)}
+    if ACTIVE[0] is not None:
+        ids.add(str(ACTIVE[0]))
+    return ids
+
+
+def reload_saved(myDB):
+    try:
+        myDB.action("UPDATE ddl_info SET status='Queued' WHERE status='Downloading' AND jd2_job_id IS NULL")
+        chk = myDB.selectone("SELECT count(*) AS count FROM ddl_info WHERE status='Queued' AND jd2_job_id IS NULL").fetchone()
+        if chk and chk['count']:
+            from mylar import webserve
+            logger.info('[DDL-QUEUE] Picking up %s downloads that were waiting when Mylar stopped.' % chk['count'])
+            webserve.WebInterface().ddl_requeue(mode='restart_queue')
+    except Exception as e:
+        logger.warn('[DDL-QUEUE] Unable to reload the saved queue: %s' % e)
+
+
 def ddl_downloader(queue):
     myDB = db.DBConnection()
     link_type_failure = {}
+    reload_saved(myDB)
     while True:
         if mylar.DDL_LOCK is True:
             time.sleep(5)
@@ -25,6 +49,7 @@ def ddl_downloader(queue):
                 logger.info('Cleaning up workers for shutdown')
                 break
 
+            ACTIVE[0] = item.get('id')
             try:
                 ddl_process(myDB, item, link_type_failure)
             except Exception as e:
@@ -33,6 +58,8 @@ def ddl_downloader(queue):
                     ddl_give_up(myDB, item, {'id': item['id']}, link_type_failure)
                 except Exception as e2:
                     logger.warn('[DDL-QUEUE] Unable to mark %s as failed: %s' % (item.get('series'), e2))
+            finally:
+                ACTIVE[0] = None
         else:
             time.sleep(5)
 
