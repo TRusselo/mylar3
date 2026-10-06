@@ -612,6 +612,20 @@ class GC(object):
 
         soup = BeautifulSoup(open(title + '.html', encoding='utf-8'), 'html.parser')
 
+        single = self._single_item(soup, comicinfo, link_type_failure)
+        if single:
+            entries, chosen = single
+            logger.info('[DDL] %s is listed on its own (%s) - downloading just that instead of the whole post, via %s.' % (chosen['series'], chosen['size'], chosen['site']))
+            if isinstance(pack_issuelist, dict) and pack_issuelist.get('issues'):
+                keep_id = str(self.issueid or comicinfo[0]['IssueID'])
+                keep = [x for x in pack_issuelist['issues'] if str(x.get('issueid')) == keep_id]
+                for x in pack_issuelist['issues']:
+                    if x not in keep:
+                        mylar.PACK_ISSUEIDS_DONT_QUEUE.pop(x.get('issueid'), None)
+                pack_issuelist['issues'][:] = keep
+            others = [dict(e) for e in entries if e is not chosen and e['source'] not in ddlsources.BUILTIN]
+            return self._queue_links([chosen], entries, others, id, mainlink, comicinfo, None, link_type_failure, myDB)
+
         i = 0
         possible_more = None
         valid_links = {}
@@ -1122,7 +1136,11 @@ class GC(object):
                     '[DDL-QUEUER] This pack has been broken up into %s separate packs -'
                     ' queueing each in sequence for your enjoyment.' % len(links)
                 )
+        return self._queue_links(links, tmp_links, other_links, id, mainlink, comicinfo, packinfo, link_type_failure, myDB)
+
+    def _queue_links(self, links, tmp_links, other_links, id, mainlink, comicinfo, packinfo, link_type_failure, myDB):
         cnt = 1
+        link_type = None
         for x in links:
             if len(links) == 1:
                 mod_id = id
@@ -1242,6 +1260,53 @@ class GC(object):
             cnt += 1
 
         return {'success': True, 'site': link_type}
+
+    def _single_item(self, soup, comicinfo, link_type_failure=None):
+        try:
+            name = comicinfo[0]['ComicName']
+            wanted = str(comicinfo[0]['IssueNumber']).strip()
+        except Exception:
+            return None
+        norm = lambda v: re.sub(r'[^a-z0-9]', '', re.sub(r'^the\s+', '', (v or '').lower().replace('&', 'and')))
+        def number(v):
+            try:
+                return float(re.sub(r'^0+(?=\d)', '', v))
+            except (TypeError, ValueError):
+                return None
+        want = number(wanted)
+        if want is None:
+            return None
+        pattern = re.compile(r'^(?P<title>.+?(?:#|\bVol(?:ume)?\.?\s*)(?P<num>\d+(?:\.\d+)?))\s*(?:\((?P<year>\d{4})\))?\s*\((?P<size>[\d.,]+\s*[KMGT]B)\)', re.I)
+        for li in soup.find_all('li'):
+            text = re.sub(r'\s+', ' ', li.get_text(' ', strip=True).replace('\u2013', '-'))
+            m = pattern.match(text)
+            if not m or number(m.group('num')) != want:
+                continue
+            title = m.group('title').strip()
+            if norm(name) not in norm(re.sub(r'(#|\bVol(?:ume)?\.?)\s*\d+(\.\d+)?$', '', title)):
+                continue
+            entries = []
+            for a in li.find_all('a'):
+                site = a.get_text(' ', strip=True)
+                href = a.get('href')
+                if not site or not href or 'sh.st' in href or site.lower() == 'read online':
+                    continue
+                src = ddlsources.canonical(site)
+                if not src or not ddlsources.is_enabled(src):
+                    continue
+                if link_type_failure and any(src[:4] in str(t).lower() or (src == 'main' and 'main' in str(t).lower()) for t in link_type_failure):
+                    continue
+                entries.append({'series': title, 'site': 'Main Server' if src == 'main' else site, 'year': m.group('year') or '',
+                                'issues': m.group('num'), 'size': m.group('size'), 'links': href, 'pack': False, 'source': src})
+            if not entries:
+                continue
+            size = ddlsources.size_bytes(m.group('size'))
+            for src in ddlsources.order(size):
+                chosen = next((e for e in entries if e['source'] == src), None)
+                if chosen:
+                    return entries, chosen
+            return entries, entries[0]
+        return None
 
     def downloadit(self, id, link, mainlink, resume=None, issueid=None, remote_filesize=0, link_type=None):
         #logger.fdebug('[%s] %s -- mainlink: %s' % (id, link, mainlink))
