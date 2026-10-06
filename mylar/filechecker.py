@@ -270,6 +270,12 @@ class FileChecker(object):
         modfilename = re.sub(filetype, '', filename).strip()
         reading_order = None
 
+        ro = re.match(r'^(0\d{1,2})\s*[-.]?\s+(?=\S)(.*\d.*)$', modfilename)
+        if ro and not (self.sarc and mylar.CONFIG.READ2FILENAME):
+            reading_order = {'reading_sequence': ro.group(1),
+                             'filename':         ro.group(2) + (filetype if filetype != 'unknown' else '')}
+            modfilename = ro.group(2)
+
         #if it's a story-arc, make sure to remove any leading reading order #'s
         if self.sarc and mylar.CONFIG.READ2FILENAME:
             removest = modfilename.find('-') # the - gets removed above so we test for the first blank space...
