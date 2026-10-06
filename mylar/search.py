@@ -209,12 +209,8 @@ def search_init(
             cmloopit = 1
         else:
             cmloopit = None
-            if any([booktype == 'One-Shot', 'annual' in ComicName.lower()]):
+            if booktype == 'One-Shot' or annual_as_oneshot(ComicName, IssueNumber):
                 cmloopit = 4
-                if 'annual' in ComicName.lower():
-                    if IssueNumber is not None:
-                        if helpers.issue_number_parser(IssueNumber).asInt != helpers.issue_number_to_int(1, None):
-                            cmloopit = None
             if cmloopit is None:
                 if len(c_number) == 1:
                     cmloopit = 3
@@ -1537,6 +1533,16 @@ def verification(verified_matches, is_info):
     return is_info #foundc
 
 
+def annual_as_oneshot(comicname, issuenumber):
+    if 'annual' not in (comicname or '').lower():
+        return False
+    if issuenumber is None:
+        return True
+    if helpers.issue_number_parser(issuenumber).asInt != helpers.issue_number_to_int(1, None):
+        return False
+    return bool(re.search(r'\b(?:19|20)\d{2}\b', comicname))
+
+
 def searchforissue(issueid=None, new=False, rsschecker=None, manual=False):
     if rsschecker == 'yes':
         while mylar.SEARCHLOCK is True:
@@ -2142,12 +2148,8 @@ def searchforissue(issueid=None, new=False, rsschecker=None, manual=False):
                                 cmloopit = 1
                             else:
                                 cmloopit = None
-                                if any([booktype == 'One-Shot', 'annual' in comicname.lower()]):
+                                if booktype == 'One-Shot' or annual_as_oneshot(comicname, xr['Issue_Number']):
                                     cmloopit = 4
-                                    if 'annual' in comicname.lower():
-                                        if xr['Issue_Number'] is not None:
-                                            if helpers.issue_number_parser(xr['Issue_Number']).asInt != helpers.issue_number_to_int(1,None):
-                                                cmloopit = None
                                 if cmloopit is None:
                                     if len(c_number) == 1:
                                         cmloopit = 3
