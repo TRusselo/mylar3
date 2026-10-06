@@ -271,10 +271,18 @@ class FileChecker(object):
         reading_order = None
 
         ro = re.match(r'^(0\d{1,2})\s*[-.]?\s+(?=\S)(.*\d.*)$', modfilename)
+        if not ro:
+            arc = re.match(r'^(\d{1,3})\s+-\s+(?=[^a-z]*[A-Z][^a-z]*?\s+-\s+.*\d)(.*)$', modfilename)
+            if arc and len(re.sub(r'[^A-Z]', '', arc.group(2).split(' - ')[0])) >= 3:
+                ro = arc
         if ro and not (self.sarc and mylar.CONFIG.READ2FILENAME):
             reading_order = {'reading_sequence': ro.group(1),
                              'filename':         ro.group(2) + (filetype if filetype != 'unknown' else '')}
             modfilename = ro.group(2)
+            label = re.match(r'^([^a-z]*[A-Z][^a-z]*?)\s+-\s+(.*\d.*)$', modfilename)
+            if label and len(re.sub(r'[^A-Z]', '', label.group(1))) >= 3:
+                modfilename = label.group(2)
+                reading_order['filename'] = modfilename + (filetype if filetype != 'unknown' else '')
 
         #if it's a story-arc, make sure to remove any leading reading order #'s
         if self.sarc and mylar.CONFIG.READ2FILENAME:

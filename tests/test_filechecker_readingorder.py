@@ -22,6 +22,9 @@ def parse(name):
     ('001 X-Men Annual 001 (1992) (Digital) (Shadowcat-Empire).cbz', 'X-Men Annual', '001'),
     ('002 Uncanny X-Men Annual 016 (1992) (Digital).cbz', 'Uncanny X-Men Annual', '016'),
     ('007- The Mighty Thor Vol.1989 #445 (March, 1992).cbz', 'The Mighty Thor', '445'),
+    ('01 - BATTLE OF THE ATOM - X-Men - Battle of the Atom 01 (of 2) (2013) (Digital) (Zone-Empire).cbr', 'X-Men - Battle of the Atom', '01'),
+    ('02 - BATTLE OF THE ATOM - All New X-Men 016 (2013) (Digital) (Zone-Empire).cbr', 'All New X-Men', '016'),
+    ('10 - BATTLE OF THE ATOM - X-Men - Battle of the Atom 02 (of 2) (2013) (Digital) (Zone-Empire).cbr', 'X-Men - Battle of the Atom', '02'),
 ])
 def test_reading_order_prefix_is_ignored(name, series, issue):
     r = parse(name)
@@ -34,6 +37,7 @@ def test_reading_order_prefix_is_ignored(name, series, issue):
     ('52 001 (2006).cbz', '52'),
     ('30 Days of Night 001 (2002).cbz', '30 Days of Night'),
     ('100 Bullets 050 (2004).cbz', '100 Bullets'),
+    ('52 - Week Fifty-Two 052 (2007).cbz', '52 - Week Fifty-Two'),
 ])
 def test_titles_starting_with_numbers_are_kept(name, series):
     assert parse(name)['series_name'] == series
