@@ -7404,6 +7404,8 @@ class WebInterface(object):
                     "ddl_prefer_upscaled": helpers.checked(mylar.CONFIG.DDL_PREFER_UPSCALED),
                     "ddl_main_large_last": helpers.checked(mylar.CONFIG.DDL_MAIN_LARGE_LAST),
                     "ddl_main_large_mb": mylar.CONFIG.DDL_MAIN_LARGE_MB,
+                    "ddl_location": '' if not mylar.CONFIG.DDL_LOCATION or mylar.CONFIG.DDL_LOCATION == mylar.CONFIG.CACHE_DIR else mylar.CONFIG.DDL_LOCATION,
+                    "ddl_location_default": mylar.CONFIG.CACHE_DIR,
                     "enable_flaresolverr": helpers.checked(mylar.CONFIG.ENABLE_FLARESOLVERR),
                     "flaresolverr_url": mylar.CONFIG.FLARESOLVERR_URL or "",
                     "jd2_enable": helpers.checked(mylar.CONFIG.JD2_ENABLE),
@@ -7982,6 +7984,13 @@ class WebInterface(object):
 
         #this makes sure things are set to the default values if they're not appropriately set.
         mylar.CONFIG.configure(update=True, startup=False)
+        try:
+            config.ddl_creations()
+        except Exception as e:
+            logger.warn('Unable to set up the DDL download folder: %s' % e)
+        chk = mylar.CONFIG.CHECK_FOLDER
+        if chk and mylar.CONFIG.DDL_LOCATION and os.path.normpath(mylar.CONFIG.DDL_LOCATION + os.sep).startswith(os.path.normpath(chk) + os.sep):
+            logger.warn('The DDL download folder %s is inside the monitored folder %s - downloads may be picked up before they finish.' % (mylar.CONFIG.DDL_LOCATION, chk))
 
         # Write the config
         logger.info('Now saving config...')

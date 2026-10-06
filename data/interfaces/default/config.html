@@ -929,6 +929,12 @@
                                            <br><small>GetComics slows down large downloads from its own server. The size comes from the post, so nothing is downloaded to check it. Other hosts are tried first; GetComics direct is still the fallback.</small>
                                        </div>
                                        <div class="row">
+                                           <label>Download folder</label>
+                                           <input type="text" id="ddl_location" name="ddl_location" value="${config['ddl_location']}" placeholder="${config['ddl_location_default']}" size="40">
+                                           <small>Where GetComics direct downloads are saved and packs unzipped before filing. Blank uses Mylar's cache folder (${config['ddl_location_default']}). Pick a folder on your downloads share, outside the monitored folder.</small>
+                                           <div id="ddl_location_warning" style="display:none;color:#c33;">This is inside the monitored folder - downloads could be processed before they finish.</div>
+                                       </div>
+                                       <div class="row">
                                            <label>Pixeldrain API Key</label>
                                            %if config['pixeldrain_env']:
                                            <input type="password" id="pixeldrain_api_key" value="" placeholder="Set by the PIXELDRAIN_API_KEY environment variable" size="30" disabled>
@@ -2259,6 +2265,12 @@ $("#enable_airdcpp").click(function(){
                                 $("#gc_options").slideUp();
                         }
 
+                function ddlLocationCheck() {
+                    var d = ($("#ddl_location").val() || '').replace(/\/+$/, ''), c = ($("input[name=check_folder]").val() || '').replace(/\/+$/, '');
+                    $("#ddl_location_warning").toggle(!!d && !!c && (d === c || d.indexOf(c + '/') === 0));
+                }
+                $("#ddl_location, input[name=check_folder]").on('input change', ddlLocationCheck);
+                ddlLocationCheck();
                 $("#enable_ddl").click(function(){
                         if ($("#enable_ddl").is(":checked"))
                         {
