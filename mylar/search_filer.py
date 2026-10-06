@@ -24,6 +24,24 @@ import mylar
 from mylar import logger, filechecker, helpers, search
 
 
+COMPLETE = re.compile(r'\s*[-:]?\s*(?:the\s+)?complete(?:\s+(?:collection|series|saga|run))?\s*$', re.I)
+
+
+def without_complete(parsed):
+    name = parsed.get('series_name') or ''
+    if not COMPLETE.search(name):
+        return None
+    out = dict(parsed)
+    for key in ('series_name', 'series_name_decoded'):
+        if out.get(key):
+            out[key] = COMPLETE.sub('', out[key]).strip()
+    if not out['series_name']:
+        return None
+    if out.get('dynamic_name'):
+        out['dynamic_name'] = filechecker.FileChecker().dynamic_replace(out['series_name'])['mod_seriesname']
+    return out
+
+
 class search_check(object):
 
     def __init__(self):
@@ -489,6 +507,12 @@ class search_check(object):
                 return None
             else:
                 logger.fdebug('match_check: %s' % filecomic)
+                retry = without_complete(parsed_comic) if filecomic['process_status'] == 'fail' and pack is True else None
+                if retry is not None:
+                    second = filechecker.FileChecker(watchcomic=ComicName).matchIT(retry)
+                    if second['process_status'] != 'fail':
+                        logger.info('[PACK] Matched %s to %s by ignoring "Complete" in the title.' % (cleantitle, ComicName))
+                        parsed_comic, filecomic = retry, second
                 if filecomic['process_status'] == 'fail':
                     logger.fdebug(
                         '%s was not a match to %s (%s)'
