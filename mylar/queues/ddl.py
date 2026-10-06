@@ -111,7 +111,7 @@ def ddl_process(myDB, item, link_type_failure):
         meganz = mega.MegaNZ()
         ddzstat = meganz.ddl_download(item['link'], item['filename'], item['id'], item['issueid'], item['link_type'])
 
-    if ddzstat.get('cancelled') or ddl_cancelled(item, ddzstat):
+    if ddl_cancelled(item, ddzstat):
         return
 
     if ddzstat['success'] and ddzstat['filename'] is not None:
