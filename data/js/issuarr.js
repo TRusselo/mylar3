@@ -278,7 +278,6 @@
       if (p.length) groups.push({ title: 'Pages', items: p.slice(0, q ? 8 : 40) });
       var a = pick(ACTIONS, lq);
       if (a.length) groups.push({ title: 'Actions', items: a });
-      if (q) groups.push({ title: 'ComicVine', items: [{ label: 'Search ComicVine for “' + q + '”', href: 'searchit?name=' + encodeURIComponent(q) }] });
 
       list.textContent = '';
       options = [];
@@ -300,7 +299,7 @@
           list.appendChild(li);
         });
       });
-      if (!options.length) list.appendChild(el('li', 'jump-empty', 'Nothing matches.'));
+      if (!options.length) list.appendChild(el('li', 'jump-empty', 'Nothing in your library or menus matches. To add a new series, use Add series.'));
       setActive(Math.min(active, options.length - 1));
     }
 
@@ -515,12 +514,58 @@
     update();
   }
 
+  /* ---------- Add series: searches ComicVine, never the library ---------- */
+
+  function setupAddSeries() {
+    var box = $id('add-series');
+    var input = $id('add-series-input');
+    if (!box || !input) return;
+    var last = null;
+    function open() {
+      last = doc.activeElement;
+      box.hidden = false;
+      input.value = '';
+      input.focus();
+    }
+    function close() {
+      box.hidden = true;
+      if (last && last.focus) last.focus();
+    }
+    doc.querySelectorAll('[data-action="add"]').forEach(function (b) {
+      b.addEventListener('click', function (e) { e.preventDefault(); open(); });
+    });
+    box.addEventListener('mousedown', function (e) { if (e.target === box) close(); });
+    box.addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.preventDefault(); close(); } });
+  }
+
+  // "More" menus (details.menu) close on an outside click, on Escape, and after a choice.
+  function setupMenus() {
+    function closeAll(except) {
+      doc.querySelectorAll('details.menu[open]').forEach(function (m) { if (m !== except) m.open = false; });
+    }
+    doc.addEventListener('click', function (e) {
+      var inMenu = e.target.closest && e.target.closest('details.menu');
+      closeAll(inMenu);
+      if (inMenu && e.target.closest('.menu-list .btn')) inMenu.open = false;
+    });
+    doc.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      var open = doc.querySelector('details.menu[open]');
+      if (!open) return;
+      open.open = false;
+      var s = open.querySelector('summary');
+      if (s) s.focus();
+    });
+  }
+
   function start() {
+    setupMenus();
     setupTabbedPage();
     setupPageHead();
     setupMobileNav();
     setupDock();
     setupJump();
+    setupAddSeries();
     setupAppearance();
     window.addEventListener('hashchange', mark);
   }

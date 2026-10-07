@@ -13,8 +13,7 @@
 	_nav = [
 	    ('Collection', [
 	        dict(label='Library', href='home', match='home comicdetails issuedetails addcomic', children=[
-	            ('Series', 'home', 'home comicdetails issuedetails addcomic'),
-	            ('Manage series', 'manageComics', 'managecomics'),
+	            ('Series', 'home', 'home comicdetails issuedetails addcomic managecomics'),
 	            ('Manage issues', 'manageIssues?status=Wanted', 'manageissues'),
 	        ]),
 	        dict(label='Story Arcs', href='storyarc_main', match='storyarc_main detailstoryarc', children=[
@@ -25,7 +24,7 @@
 	        dict(label='Ledger', href='ledger', match='ledger'),
 	    ]),
 	    ('Find', [
-	        dict(label='Search', href='#', match='searchit', action='jump'),
+	        dict(label='Add series', href='#', match='searchit', action='add'),
 	        dict(label='Wanted', href='upcoming', match='upcoming', disabled=bool(mylar.WANTED_TAB_OFF)),
 	        dict(label='Calendar', href='pullist', match='pullist', badge=('New' if mylar.PULLNEW != 'no' else None), children=[
 	            ('This week', 'pullist', 'pullist'),
@@ -95,7 +94,7 @@
 		<div class="topbar">
 			<a href="home" class="brand"><img class="brand-mark" src="images/issuarr-mark.png" alt="" width="28" height="28" /><span class="brand-name">Issuarr</span></a>
 			<div style="display: flex; gap: 4px">
-				<button type="button" class="icon-btn" data-ui data-action="jump" aria-label="Search or jump to"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+				<button type="button" class="icon-btn" data-ui data-action="jump" aria-label="Jump to"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
 				<button type="button" class="icon-btn" data-ui id="nav-toggle" aria-label="Menu" aria-expanded="false" aria-controls="sidebar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
 			</div>
 		</div>
@@ -106,7 +105,7 @@
 				<a href="home" class="brand"><img class="brand-mark" src="images/issuarr-mark.png" alt="" width="28" height="28" /><span class="brand-name">Issuarr</span></a>
 				<button type="button" class="icon-btn" data-ui id="notifs" onclick="manageNotifications()" aria-label="Notifications" title="Notifications (Alt+N)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></button>
 			</div>
-			<button type="button" class="jump-btn" data-ui data-action="jump" aria-haspopup="dialog">Search or jump to…<kbd>Ctrl K</kbd></button>
+			<button type="button" class="jump-btn" data-ui data-action="jump" aria-haspopup="dialog">Jump to…<kbd>Ctrl K</kbd></button>
 
 			%for _glabel, _items in _nav:
 			<div class="nav-group${'' if _glabel else ' is-system'}">
@@ -261,15 +260,30 @@
 	</div>
 
 	<div class="jump-backdrop" id="jump" hidden>
-		<div class="jump" role="dialog" aria-modal="true" aria-label="Search or jump to">
+		<div class="jump" role="dialog" aria-modal="true" aria-label="Jump to">
 			<div class="jump-field">
 				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-				<input id="jump-input" class="jump-input" data-ui type="text" role="combobox" aria-expanded="false" aria-controls="jump-list" aria-autocomplete="list" aria-label="Search or jump to" autocomplete="off" spellcheck="false" placeholder="Series, pages, settings, actions">
+				<input id="jump-input" class="jump-input" data-ui type="text" role="combobox" aria-expanded="false" aria-controls="jump-list" aria-autocomplete="list" aria-label="Jump to" autocomplete="off" spellcheck="false" placeholder="Series in your library, pages, settings, actions">
 				<kbd>Esc</kbd>
 			</div>
 			<ul class="jump-list" id="jump-list" role="listbox" aria-label="Results"></ul>
 			<div class="jump-foot"><span><kbd>↑</kbd> <kbd>↓</kbd> move</span><span><kbd>Enter</kbd> open</span><span><kbd>Ctrl K</kbd> from any page</span></div>
 		</div>
+	</div>
+
+	<div class="jump-backdrop" id="add-series" hidden>
+		<form class="jump add-series" role="dialog" aria-modal="true" aria-labelledby="add-series-title" action="searchit" method="get">
+			<div class="add-head">
+				<h2 id="add-series-title">Add a series</h2>
+				<p>Searches ComicVine. To find something already in your library, use the Library filter or <kbd>Ctrl K</kbd>.</p>
+			</div>
+			<div class="jump-field">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+				<label for="add-series-input" class="sr-only">Series name</label>
+				<input id="add-series-input" class="jump-input" data-ui type="text" name="name" required autocomplete="off" spellcheck="false" placeholder="Series name, for example Saga">
+				<button type="submit" class="btn btn-primary">Search ComicVine</button>
+			</div>
+		</form>
 	</div>
 
 	<script src="js/libs/jquery-ui.min.js"></script>

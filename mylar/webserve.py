@@ -375,6 +375,34 @@ class WebInterface(object):
     alpha_volume_counts.exposed = True
 
 
+    def library_data(self, **kwargs):
+        """Every series in the library for the Library page, with wanted counts."""
+        cherrypy.response.headers['Content-Type'] = 'application/json'
+        myDB = db.DBConnection()
+        wanted = {r['ComicID']: r['cnt'] for r in myDB.select("SELECT ComicID, COUNT(*) AS cnt FROM issues WHERE Status='Wanted' GROUP BY ComicID")}
+        series = []
+        for c in helpers.havetotals():
+            total = c['totalissues'] if isinstance(c['totalissues'], int) else 0
+            series.append({'id': c['ComicID'],
+                            'name': c['ComicName'],
+                            'sort': c['ComicSortName'] or c['ComicName'],
+                            'year': c['ComicYear'],
+                            'publisher': c['ComicPublisher'],
+                            'volume': c['ComicVolume'],
+                            'type': c['displaytype'],
+                            'image': c['ComicImage'],
+                            'have': c['haveissues'] or 0,
+                            'total': total,
+                            'wanted': wanted.get(c['ComicID'], 0),
+                            'status': c['Status'],
+                            'recent': c['recentstatus'],
+                            'latest': c['LatestIssue'],
+                            'latest_date': c['LatestDate'],
+                            'updated': c['DateAdded'],
+                            'cv_removed': c['cv_removed']})
+        return json.dumps({'series': series})
+    library_data.exposed = True
+
     def loadhome(self, **kwargs):
         iDisplayStart = int(kwargs['start'])
         iDisplayLength = int(kwargs['length'])
@@ -819,6 +847,10 @@ class WebInterface(object):
                     "Status":                         comic_status,
                     "ImageTime":                      '?' + datetime.datetime.now().strftime('%y-%m-%d %H:%M:%S')
                }
+        try:
+            comicConfig['wanted'] = myDB.selectone("SELECT COUNT(*) AS cnt FROM issues WHERE ComicID=? AND Status='Wanted'", [ComicID]).fetchone()['cnt']
+        except Exception:
+            comicConfig['wanted'] = 0
 
         return serve_template(templatename="comicdetails_update.html", title=comicname, comic=comic, comicConfig=comicConfig, series=series, default_dates=default_dates)
     comicDetails.exposed = True
