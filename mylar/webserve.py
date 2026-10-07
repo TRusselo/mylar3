@@ -5011,6 +5011,7 @@ class WebInterface(object):
             totalissues = myDB.select("SELECT COUNT(*) as count from storyarcs WHERE StoryARcID=? AND NOT Manual is 'deleted'", [al['StoryArcID']])
 
             havecnt = myDB.select("SELECT COUNT(*) as count FROM storyarcs WHERE StoryArcID=? AND (Status='Downloaded' or Status='Archived')", [al['StoryArcID']])
+            wantcnt = myDB.select("SELECT COUNT(*) as count FROM storyarcs WHERE StoryArcID=? AND Status='Wanted' AND NOT Manual is 'deleted'", [al['StoryArcID']])
             havearc = havecnt[0][0]
             totalarc = totalissues[0][0]
             if not havearc:
@@ -5032,6 +5033,8 @@ class WebInterface(object):
                             "Status":           al['Status'],
                             "percent":          percent,
                             "Have":             havearc,
+                            "Wanted":           wantcnt[0][0] or 0,
+                            "Publisher":        al['Publisher'],
                             "SpanYears":        helpers.spantheyears(al['StoryArcID']),
                             "Total":            totalarc,
                             "CV_ArcID":         al['CV_ArcID']})
@@ -5081,7 +5084,11 @@ class WebInterface(object):
         template = 'storyarc_detail.html'
 
         if arcinfo:
-            arcdetail = self.storyarc_main(arcid=arcinfo[0]['CV_ArcID'])
+            # storyarc_main looks arcs up by StoryArcID; CV_ArcID only matches it for arcs added from a ComicVine search.
+            try:
+                arcdetail = self.storyarc_main(arcid=StoryArcID)
+            except IndexError:
+                arcdetail = {'percent': 0, 'Have': 0, 'Total': len(arcinfo), 'Wanted': 0}
             storyarcbanner = None
             filepath = None
             if arcinfo[0]['ArcImage'] is not None:
@@ -5166,7 +5173,8 @@ class WebInterface(object):
             bannerheight= '280'
             spanyears = None
 
-        return serve_template(templatename=template, title="Detailed Arc list", readlist=arcinfo, storyarcname=StoryArcName, storyarcid=StoryArcID, cvarcid=cvarcid, sdir=sdir, arcdetail=arcdetail, storyarcbanner=storyarcbanner, bannerheight=bannerheight, bannerwidth=bannerwidth, spanyears=spanyears)
+        # One template draws both banner shapes; a portrait image is laid out as a poster next to the details.
+        return serve_template(templatename='storyarc_detail.html', title=StoryArcName or "Story arc", readlist=arcinfo, storyarcname=StoryArcName, storyarcid=StoryArcID, cvarcid=cvarcid, sdir=sdir, arcdetail=arcdetail, storyarcbanner=storyarcbanner, bannerheight=bannerheight, bannerwidth=bannerwidth, spanyears=spanyears, poster=(template == 'storyarc_detail.poster.html'))
     detailStoryArc.exposed = True
 
     def order_edit(self, **kwargs): #id, value):
@@ -5308,7 +5316,7 @@ class WebInterface(object):
                     read.addtoreadlist()
                 elif action == 'Read':
                     logger.fdebug("Marking %s #%s as %s" % (comicname, mi['Issue_Number'], action))
-                    markasRead(IssueID)
+                    self.markasRead(IssueID)
                 elif action == 'Added':
                     logger.fdebug("Marking %s #%s as %s" % (comicname, mi['Issue_Number'], action))
                     read = readinglist.Readinglist(IssueID=IssueID)
