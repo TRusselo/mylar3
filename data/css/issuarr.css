@@ -241,6 +241,7 @@ table th, table.display thead th {
 table th.sorting_desc, table th.sorting_asc { background: var(--raised) !important; background-image: none !important; color: var(--text) !important; }
 table td { border-color: var(--line-soft) !important; }
 table td a { color: var(--text) !important; font-weight: 600; }
+table td a.btn-primary { color: var(--ink) !important; }
 table.display tr, table.display tr.odd, table.display tr.even { background: var(--surface) !important; }
 table.display tr:hover td { background: var(--raised) !important; }
 
@@ -366,6 +367,7 @@ table.dt td.actions .btn { min-width: 92px; }
 
 .status { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; white-space: nowrap; color: var(--text-2); }
 .status::before { content: ""; flex: none; width: 9px; height: 9px; border-radius: 2px; background: var(--status-color, var(--faint)); box-sizing: border-box; }
+.status[hidden] { display: none; }
 .status.is-have { --status-color: var(--have); }
 .status.is-wanted { --status-color: var(--wanted); color: var(--wanted); }
 .status.is-snatched { --status-color: var(--snatched); }
@@ -623,6 +625,56 @@ a.release-title:hover { text-decoration: underline; text-underline-offset: 3px; 
 .upcoming .empty-state.panel { margin: 0; padding: 22px 16px; }
 .mass-add .set-switch { margin: 12px 0 !important; }
 .mass-add .selectize-control { margin-top: 4px; }
+
+/* ---------- Tools ---------- */
+
+.tools-intro { margin: 0 0 18px; }
+.tools-intro a { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
+.tools-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 20px; align-items: start; }
+.tools-narrow { max-width: 760px; }
+.tools-form { gap: 16px; }
+.field { display: flex !important; flex-direction: column; gap: 6px; float: none !important; width: auto !important; margin: 0 !important; }
+.field .field-label { font-size: 13.5px; font-weight: 600; color: var(--text); }
+.field input[type="text"], .field input[type="number"], .field select { min-height: 42px; padding: 0 12px; box-sizing: border-box; width: 100%; font-family: var(--font-mono); font-size: 13.5px; }
+.field small { font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+.switch-list { display: flex; flex-direction: column; border-top: 1px solid var(--line-soft); }
+.switch-row { display: flex !important; gap: 12px; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid var(--line-soft);
+  float: none !important; width: auto !important; margin: 0 !important; cursor: pointer; }
+.switch-row[hidden] { display: none !important; }
+.switch-row input { flex: none; width: 18px; height: 18px; margin: 2px 0 0; }
+.switch-row > span { display: flex; flex-direction: column; gap: 2px; }
+.switch-row b { font-weight: 600; color: var(--text); font-size: 14px; }
+.switch-row small { color: var(--muted); font-size: 12.5px; line-height: 1.45; }
+.tools .import-panel { margin: 0 !important; }
+/* WebP conversion: its own stylesheet does the layout, this draws it like the other pages. */
+.wp .page-head { margin: 0; }
+.wp .wp-warn { border: 1px solid color-mix(in srgb, var(--snatched) 45%, var(--line)); border-radius: var(--radius); padding: 14px 18px;
+  background: color-mix(in srgb, var(--snatched) 8%, var(--surface)); color: var(--text-2); }
+.wp .wp-warn b { color: var(--text); }
+.wp .wp-form fieldset { min-width: 0; padding: 18px 20px !important; border-radius: calc(var(--radius) * 1.3); background: var(--surface) !important; }
+.wp .wp-row { grid-template-columns: minmax(150px, 220px) minmax(0, 1fr); }
+.wp .wp-row > * { min-width: 0; }
+.wp .wp-row input[type="text"] { width: 100%; }
+@media (max-width: 640px) { .wp .wp-row { grid-template-columns: minmax(0, 1fr); } }
+.wp .wp-form legend { float: left; width: 100%; padding: 0 0 6px !important; font-family: var(--font-body); font-size: 16px; font-weight: 700; }
+.wp .wp-form legend + * { clear: both; }
+.wp .wp-row > span:first-child { font-size: 14px; color: var(--text); }
+.wp .wp-row input[type="text"], .wp .wp-row input[type="number"] { min-height: 38px; padding: 0 10px; font-family: var(--font-mono); font-size: 13px; }
+.wp .wp-check { float: none !important; width: auto !important; margin: 0 !important; color: var(--text-2); }
+.wp .wp-danger { color: var(--failed-text); }
+.wp .lg-build { padding: 12px 14px; border-radius: var(--radius); background: var(--raised); border-color: var(--line); }
+.wp .lg-tile { border-radius: var(--radius-sm); }
+.wp .wp-error { border-radius: var(--radius); color: var(--failed-text); border-color: var(--failed); }
+.wp .wp-bar > div { background: var(--have); }
+.wp-dialog { border-radius: var(--radius) !important; background: var(--surface) !important; color: var(--text) !important; border-color: var(--line) !important; }
+.imp-opts { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; margin: 0; font-size: 13.5px; color: var(--text-2); }
+.imp-opts a { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
+.imp-name { font-weight: 600; }
+.imp-cvid { margin-left: 6px; font-size: 12px; }
+.imp-file-list { margin: 0; padding: 0; list-style: none; font-size: 12.5px; }
+.imp-file-list li { padding: 4px 0; border-bottom: 1px solid var(--line-soft); overflow-wrap: anywhere; }
+.tools #tabs > .ui-tabs-panel { border: 0 !important; background: transparent !important; }
+@media (max-width: 1100px) { .tools-grid { grid-template-columns: minmax(0, 1fr); } }
 
 /* The scan / import panel from importstatus.html, drawn as a panel. */
 .import-panel { min-width: 0; margin: 0 !important; padding: 18px 20px !important; border-radius: calc(var(--radius) * 1.3) !important; }

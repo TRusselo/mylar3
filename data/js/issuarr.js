@@ -126,6 +126,7 @@
     }
     window.addEventListener('hashchange', function () {
       if (selectTab(location.hash)) window.scrollTo(0, 0);
+      mark();  // the title reads the highlighted sidebar entry, so update that first
       syncTitle();
     });
     syncTitle();

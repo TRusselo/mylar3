@@ -6564,7 +6564,7 @@ class WebInterface(object):
         return serve_template(templatename="importresults.html", title="Import Results", results=countit) #results, watchresults=watchresults)
     importResults.exposed = True
 
-    def ImportFilelisting(self, comicname, dynamicname, volume):
+    def ImportFilelisting(self, comicname, dynamicname, volume, fmt=None):
         comicname = urllib.parse.unquote_plus(comicname)
         dynamicname = urllib.parse.unquote_plus(dynamicname) #urllib.unquote(dynamicname).decode('utf-8')
         myDB = db.DBConnection()
@@ -6574,6 +6574,10 @@ class WebInterface(object):
             if not volume.lower().startswith('v'):
                 volume = 'v' + str(volume)
             results = myDB.select("SELECT * FROM importresults WHERE (WatchMatch is Null OR WatchMatch LIKE 'C%') AND DynamicName=? AND Volume=?",[dynamicname,volume])
+        if fmt == 'json':
+            # the Import results page escapes these itself
+            cherrypy.response.headers['Content-Type'] = 'application/json'
+            return json.dumps({'files': [r['ComicFilename'] for r in results]})
 
         filelisting = '<table width="500"><tr><td>'
         filelisting += '<center><b>Files that have been scanned in for:</b></center>'
