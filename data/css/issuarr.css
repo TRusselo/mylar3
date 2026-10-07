@@ -557,6 +557,73 @@ table.dt tr.is-picked td { background: color-mix(in srgb, var(--text) 8%, var(--
 .series-hero ~ #tabs #tabs-2 table.comictable, .series-hero ~ #tabs #tabs-2 table.comictable tbody,
 .series-hero ~ #tabs #tabs-2 table.comictable tr, .series-hero ~ #tabs #tabs-2 table.comictable td { display: block; width: auto; padding: 0; background: transparent !important; }
 
+/* ---------- Calendar ---------- */
+
+.week-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+.week-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.week-nav .btn-ghost { min-width: 38px; padding: 0 8px; }
+.week-range { margin: 0 !important; font-size: 24px; }
+.week-updated { font-size: 13px; }
+.week-summary { display: flex; flex-wrap: wrap; gap: 6px 22px; margin: 0; padding: 14px 18px; font-size: 14px; color: var(--text-2);
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.week-summary b { font-family: var(--font-mono); font-weight: 600; color: var(--text); }
+.week-summary .is-wanted b { color: var(--wanted); }
+
+.cal-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; align-items: start; }
+.cal-layout > .section { gap: 14px; }
+.cal-layout .lib-search { flex: none; max-width: none; }
+.cal-aside { display: flex; flex-direction: column; gap: 16px; position: sticky; top: calc(var(--carbon-head, 0px) + 16px); }
+.cal-aside p { margin: 0; font-size: 13.5px; line-height: 1.5; }
+.coming-day { display: flex; flex-direction: column; gap: 6px; padding-top: 10px; border-top: 1px solid var(--line-soft); }
+.coming-day:first-of-type { border-top: 0; padding-top: 0; }
+.coming-date { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.coming-item { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 14px; }
+.coming-item a { color: var(--text); font-weight: 600; min-width: 0; }
+.coming-item .status { font-size: 12.5px; font-weight: 500; }
+
+.release-list { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: calc(var(--radius) * 1.3); overflow: hidden; }
+.release-pub { margin: 0; padding: 14px 16px 6px; font-family: var(--font-body); font-stretch: 100%; font-size: 12.5px; font-weight: 600; color: var(--muted);
+  border-top: 1px solid var(--line-soft); }
+.release-pub:first-child { border-top: 0; }
+.release-pub[hidden], .release[hidden] { display: none; }
+.release { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto auto; align-items: center; gap: 4px 14px; padding: 9px 16px; }
+.release + .release { border-top: 1px solid var(--line-soft); }
+.release:target { background: color-mix(in srgb, var(--snatched) 10%, var(--surface)); }
+.release-thumb {
+  position: relative; display: block; width: 34px; height: 51px; overflow: hidden; border-radius: 4px; background-color: var(--tint, var(--raised));
+  background-image: radial-gradient(rgba(255, 255, 255, .16) 1px, transparent 1.5px); background-size: 7px 7px;
+}
+.release-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.release-main { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; min-width: 0; }
+.release-title { color: var(--text) !important; font-weight: 600; overflow-wrap: anywhere; }
+a.release-title:hover { text-decoration: underline; text-underline-offset: 3px; }
+.release-issue { color: var(--text-2); }
+.release-meta { flex-basis: 100%; font-size: 12.5px; color: var(--muted); }
+.release .status { font-size: 13.5px; }
+.release-actions { display: flex; gap: 6px; justify-content: flex-end; min-width: 100px; }
+#cal-empty { border-top: 1px solid var(--line-soft); }
+.menu-switch { padding: 0 10px; min-height: 40px !important; font-size: 14px !important; }
+@media (max-width: 1240px) {
+  .cal-layout { grid-template-columns: minmax(0, 1fr); }
+  .cal-aside { position: static; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); align-items: start; }
+}
+.mass-add p { margin: 0 0 12px; }
+.ui-dialog .btn-primary { background: var(--text) !important; border-color: var(--text) !important; color: var(--ink) !important; }
+.selectize-control .selectize-input, .selectize-control .selectize-input.focus, .selectize-dropdown {
+  background: var(--surface) !important; background-image: none !important; color: var(--text) !important; border-color: var(--line) !important; box-shadow: none !important;
+}
+.selectize-control .selectize-input input { color: var(--text) !important; }
+.selectize-control.multi .selectize-input > div { background: var(--raised) !important; background-image: none !important; color: var(--text) !important; border-color: var(--line) !important; text-shadow: none !important; }
+.selectize-dropdown .active { background: var(--raised) !important; color: var(--text) !important; }
+
+/* Upcoming */
+.count-badge { margin-left: 6px; font-family: var(--font-mono); font-size: .7em; font-weight: 500; color: var(--muted); }
+.upcoming .section-head h2 { font-size: 20px; }
+.upcoming .section-head .btn-row { gap: 12px; }
+.upcoming .empty-state.panel { margin: 0; padding: 22px 16px; }
+.mass-add .set-switch { margin: 12px 0 !important; }
+.mass-add .selectize-control { margin-top: 4px; }
+
 /* The scan / import panel from importstatus.html, drawn as a panel. */
 .import-panel { min-width: 0; margin: 0 !important; padding: 18px 20px !important; border-radius: calc(var(--radius) * 1.3) !important; }
 .import-panel legend { float: left; width: 100%; padding: 0 0 10px !important; font-family: var(--font-body) !important; font-size: 16px !important; font-weight: 700 !important; }
@@ -689,6 +756,12 @@ textarea.css-editor.is-bad { border-color: var(--failed); }
   .filter-tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
   .filter-tabs button { flex: none; }
   .series-hero { grid-template-columns: 104px minmax(0, 1fr); gap: 16px; }
+  .cal-layout { grid-template-columns: minmax(0, 1fr); }
+  .cal-aside { position: static; }
+  .release { grid-template-columns: 34px minmax(0, 1fr) auto; }
+  .release-actions { grid-column: 2 / -1; justify-content: flex-start; min-width: 0; }
+  .release-actions:empty { display: none; }
+  .week-range { font-size: 20px; }
   .series-title { font-size: 24px !important; }
 }
 

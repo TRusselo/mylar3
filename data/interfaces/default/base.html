@@ -25,10 +25,10 @@
 	    ]),
 	    ('Find', [
 	        dict(label='Add series', href='#', match='searchit', action='add'),
-	        dict(label='Wanted', href='upcoming', match='upcoming', disabled=bool(mylar.WANTED_TAB_OFF)),
-	        dict(label='Calendar', href='pullist', match='pullist', badge=('New' if mylar.PULLNEW != 'no' else None), children=[
+	        dict(label='Wanted', href='wanted', match='wanted', disabled=bool(mylar.WANTED_TAB_OFF)),
+	        dict(label='Calendar', href='pullist', match='pullist upcoming', badge=('New' if mylar.PULLNEW != 'no' else None), children=[
 	            ('This week', 'pullist', 'pullist'),
-	            ('Upcoming', 'upcoming#tabs-1', 'upcoming#tabs-1 upcoming#tabs-2 upcoming#tabs-3'),
+	            ('Upcoming', 'upcoming', 'upcoming'),
 	        ]),
 	    ]),
 	    ('Operations', [

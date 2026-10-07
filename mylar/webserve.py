@@ -3071,6 +3071,29 @@ class WebInterface(object):
             return
     pullSearch.exposed = True
 
+    def _calendar_extras(self, weekinfo):
+        """Issues of followed series due in the four weeks after the shown week, and pull-list rows that need a look."""
+        myDB = db.DBConnection()
+        try:
+            start = datetime.datetime.strptime(weekinfo['midweek'], '%Y-%m-%d').date() + datetime.timedelta(days=3)
+        except Exception:
+            start = datetime.date.today()
+        end = start + datetime.timedelta(days=28)
+        coming = []
+        try:
+            rows = myDB.select("SELECT i.ComicID, i.ComicName, i.Issue_Number, i.ReleaseDate, i.Status FROM issues i INNER JOIN comics c ON c.ComicID = i.ComicID WHERE i.ReleaseDate > ? AND i.ReleaseDate <= ? ORDER BY i.ReleaseDate, i.ComicName COLLATE NOCASE LIMIT 60", [start.isoformat(), end.isoformat()])
+            for r in rows:
+                if not coming or coming[-1]['date'] != r['ReleaseDate']:
+                    coming.append({'date': r['ReleaseDate'], 'items': []})
+                coming[-1]['items'].append({'comicid': r['ComicID'], 'name': r['ComicName'], 'issue': r['Issue_Number'], 'status': r['Status']})
+        except Exception as e:
+            logger.warn('[CALENDAR] Unable to list the coming weeks: %s' % e)
+        try:
+            attention = myDB.selectone("SELECT COUNT(*) AS cnt FROM weekly WHERE Status='Mismatched' OR Status='Incomplete'").fetchone()['cnt']
+        except Exception:
+            attention = 0
+        return {'coming_up': coming, 'attention_count': attention}
+
     def pullist(self, **args): #week=None, year=None, generateonly=False, current=None):
         week = None
         year = None
@@ -3119,7 +3142,7 @@ class WebInterface(object):
                             logger.warn('Unable to populate the pull-list. Not continuing at this time (will try again in abit)')
 
             if all([w_results is None, generateonly is False]):
-                return serve_template(templatename="weeklypull.html", title="Weekly Pull", weeklyresults=weeklyresults, pullfilter=True, weekfold=weekinfo['week_folder'], wantedcount=0, weekinfo=weekinfo)
+                return serve_template(templatename="weeklypull.html", title="Calendar", weeklyresults=weeklyresults, pullfilter=True, weekfold=weekinfo['week_folder'], wantedcount=0, weekinfo=weekinfo, auto_mass_add=helpers.checked(mylar.CONFIG.AUTO_MASS_ADD), **self._calendar_extras(weekinfo))
 
             watchlibrary = helpers.listLibrary()
             issueLibrary = helpers.listIssues(weekinfo['weeknumber'], weekinfo['year'])
@@ -3255,10 +3278,7 @@ class WebInterface(object):
                             endresults.append(weekit)
                         weeklyresults = endresults
 
-            if week:
-                return serve_template(templatename="weeklypull.html", title="Weekly Pull", weeklyresults=weeklyresults, pullfilter=True, weekfold=weekinfo['week_folder'], wantedcount=wantedcount, weekinfo=weekinfo, auto_mass_add=helpers.checked(mylar.CONFIG.AUTO_MASS_ADD))
-            else:
-                return serve_template(templatename="weeklypull.html", title="Weekly Pull", weeklyresults=weeklyresults, pullfilter=True, weekfold=weekinfo['week_folder'], wantedcount=wantedcount, weekinfo=weekinfo, auto_mass_add=helpers.checked(mylar.CONFIG.AUTO_MASS_ADD))
+            return serve_template(templatename="weeklypull.html", title="Calendar", weeklyresults=weeklyresults, pullfilter=True, weekfold=weekinfo['week_folder'], wantedcount=wantedcount, weekinfo=weekinfo, auto_mass_add=helpers.checked(mylar.CONFIG.AUTO_MASS_ADD), **self._calendar_extras(weekinfo))
     pullist.exposed = True
 
     def removeautowant(self, comicname, release):
@@ -3465,9 +3485,13 @@ class WebInterface(object):
                 'mismatched': mismatched}
     fly_me_to_the_moon.exposed = True
 
+    def wanted(self):
+        return serve_template(templatename="wanted.html", title="Wanted", tier_cutoff=mylar.CONFIG.SEARCH_TIER_CUTOFF)
+    wanted.exposed = True
+
     def upcoming(self):
         upcomingdata = self.fly_me_to_the_moon()
-        return serve_template(templatename="upcoming.html", title="Upcoming", upcoming=upcomingdata['upcoming'], upcoming_count=upcomingdata['upcoming_count'], future_nodata_upcoming=upcomingdata['future_nodata_upcoming'], mismatched=upcomingdata['mismatched'], mismatched_count=upcomingdata['mismatched_count'])
+        return serve_template(templatename="upcoming.html", title="Upcoming", upcoming=upcomingdata['upcoming'], upcoming_count=upcomingdata['upcoming_count'], futureupcoming=upcomingdata['futureupcoming'], future_nodata_upcoming=upcomingdata['future_nodata_upcoming'], mismatched=upcomingdata['mismatched'], mismatched_count=upcomingdata['mismatched_count'])
     upcoming.exposed = True
 
     def update_upcoming_filters(self):
@@ -4683,6 +4707,10 @@ class WebInterface(object):
 
             for issueId in issueIds:
                 issue_data = myDB.selectone("SELECT C.Type, C.ComicYear, I.ComicName, I.Issue_Number, I.ComicID, I.IssueID FROM comics as C INNER JOIN issues as I on C.ComicID = I.ComicID WHERE I.IssueID=?", [issueId]).fetchone()
+                if issue_data is None:
+                    # annuals and story-arc-only issues aren't in the issues table
+                    logger.warn('[FORCE-SEARCH] IssueID %s is not an issue of a series in the library - skipping it.' % issueId)
+                    continue
                 passInfo = {'issueid': issueId,
                             'comicname': issue_data['ComicName'],
                             'seriesyear': issue_data['ComicYear'],
