@@ -184,6 +184,7 @@
     pixeldrain();
     setInterval(pollActive, 5000);
     document.addEventListener('visibilitychange', function () { if (!document.hidden) pollActive(true); });
+    document.addEventListener('issuarr:refresh', function () { pollActive(true); loadTable(); });
   }
   if (window.jQuery) window.jQuery(start); else document.addEventListener('DOMContentLoaded', start);
 })();

@@ -8,10 +8,10 @@
 <%def name="headerIncludes()">
 	<div id="subhead_container">
 		<div id="subhead_menu">
-			<a id="menu_link_carepackage" href="carepackage">Care Package</a>
-			<a id="menu_link_shutdown" href="shutdown">Shut Down</a>
-			<a id="menu_link_shutdown" href="restart">Restart</a>
-                        <a id="menu_link_edit" title="Manage blocked Providers" href="javascript:void(0)" onclick="manageBlockedProviders()">Provider Blocklist</a>
+			<a id="menu_link_carepackage" href="carepackage">Care package</a>
+			<a id="menu_link_shutdown" href="shutdown" onclick="return confirm('Shut down Issuarr? It stays off until you start it again.');">Shut down</a>
+			<a id="menu_link_shutdown" href="restart" onclick="return confirm('Restart Issuarr now?');">Restart</a>
+                        <a id="menu_link_edit" title="Manage blocked Providers" href="javascript:void(0)" onclick="manageBlockedProviders()">Provider blocklist</a>
                         <div id="manage_blocked_providers_dialog" title="Choose a specific provider to Unblock" style="display:none">
                             <table id="blocked_table" width="100%">
                                 <thead>

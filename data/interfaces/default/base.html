@@ -520,9 +520,11 @@
         }
 
         function reload_table() {
-            var tables = $('table.display').DataTable();
+            // Rebuilt pages load their own rows and listen for this instead of DataTables.
+            document.dispatchEvent(new CustomEvent('issuarr:refresh'));
             var tt = document.getElementById("page_name");
-            if(typeof(tt) != 'undefined' && tt != null){
+            if(typeof(tt) != 'undefined' && tt != null && $.fn.DataTable && $('table.display').length){
+                var tables = $('table.display').DataTable();
                 if (tt.value != "weekly" && tt.value != "import_results" && tt.value != "manage_comics" && tt.value != "manage_issues" && tt.value != "manage_failed" && tt.value != "reading_list" && tt.value != "storyarcs_index" && tt.value != "storyarc_detail" && tt.value != "config") {
                     // this is required so it doesn't error if on the weekly page
                     // once weekly & other pages are converted to dynamic loading, this if can be removed

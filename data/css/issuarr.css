@@ -204,6 +204,7 @@ a.dock-row:hover { text-decoration: none; color: var(--text); }
 }
 #subhead #subhead_container #subhead_menu a:hover, #subhead_menu a:hover, .page-actions a:hover { border-color: var(--muted) !important; text-decoration: none; }
 #subhead_menu a .ui-icon, #subhead_menu a img { display: none !important; }
+#subhead_menu a .ui-button-text { padding: 0 !important; line-height: inherit !important; }
 #subhead_menu a#menu_link_delete { color: var(--failed-text) !important; }
 
 /* Pages whose sections live in the sidebar hide their own tab strip. */
@@ -338,7 +339,7 @@ label, small { color: var(--muted); }
 .kv dt { color: var(--muted); }
 .kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
 
-.dt-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: calc(var(--radius) * 1.3); }
+.dt-wrap { position: relative; overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: calc(var(--radius) * 1.3); }
 table.dt { width: 100%; border-collapse: collapse; border: 0 !important; font-size: 14px; }
 table.dt th { padding: 11px 14px !important; text-align: left; white-space: nowrap; }
 table.dt td { padding: 10px 14px; border-bottom: 1px solid var(--line-soft) !important; vertical-align: middle; }
@@ -372,10 +373,29 @@ table.dt td.actions .btn { min-width: 92px; }
   background: color-mix(in srgb, var(--snatched) 9%, var(--surface)); border: 1px solid color-mix(in srgb, var(--snatched) 45%, var(--line)); }
 .notice[hidden] { display: none; }
 
+.menu { position: relative; }
+.menu > summary { list-style: none; }
+.menu > summary::-webkit-details-marker { display: none; }
+.menu-list {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; min-width: 250px; display: flex; flex-direction: column; gap: 2px;
+  padding: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 16px 40px rgba(0, 0, 0, .35);
+}
+.menu-list .btn { justify-content: flex-start; width: 100%; }
+.menu-list hr { border: 0; border-top: 1px solid var(--line); margin: 4px 2px; }
+
+.bulk-bar {
+  position: sticky; top: var(--carbon-head, 0px); z-index: 20; display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  padding: 10px 12px 10px 16px; background: var(--raised); border: 1px solid var(--line); border-radius: var(--radius);
+}
+.bulk-bar[hidden] { display: none; }
+.bulk-bar .bulk-count { font-weight: 700; margin-right: auto; }
+table.dt td.check, table.dt th.check { width: 28px; padding-right: 0 !important; }
+table.dt input[type="checkbox"] { width: 17px; height: 17px; margin: 0; vertical-align: middle; }
+
 input.inline-num { width: 76px; min-height: 34px; padding: 0 8px; box-sizing: border-box; font-family: var(--font-mono); font-size: 13px; }
 
 /* The scan / import panel from importstatus.html, drawn as a panel. */
-.import-panel { margin: 0 !important; padding: 18px 20px !important; border-radius: calc(var(--radius) * 1.3) !important; }
+.import-panel { min-width: 0; margin: 0 !important; padding: 18px 20px !important; border-radius: calc(var(--radius) * 1.3) !important; }
 .import-panel legend { float: left; width: 100%; padding: 0 0 10px !important; font-family: var(--font-body) !important; font-size: 16px !important; font-weight: 700 !important; }
 .import-panel .ip-head { clear: both; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; overflow: visible !important; }
 .import-panel .ip-phase { font-weight: 700; padding: 2px 8px; border-radius: 5px; background: var(--raised) !important; color: var(--text) !important; }
@@ -388,10 +408,26 @@ input.inline-num { width: 76px; min-height: 34px; padding: 0 8px; box-sizing: bo
 .import-panel .ip-bar { height: 6px; border-radius: 3px; background: var(--line) !important; overflow: hidden; margin: 10px 0; }
 .import-panel .ip-fill { height: 100%; background: var(--snatched) !important; }
 .import-panel table.ip-stats { background: transparent !important; width: 100%; font-size: 13.5px; }
+@media (max-width: 640px) { .import-panel table.ip-stats { display: block; overflow-x: auto; } }
 .import-panel table.ip-stats td { padding: 3px 8px 3px 0; border: 0 !important; }
 .import-panel table.ip-stats td:nth-child(odd) { color: var(--muted); }
 .import-panel pre.ip-log { max-height: 260px; overflow: auto; background: var(--ink) !important; color: var(--text-2) !important; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 10px 12px; font-family: var(--font-mono); font-size: 12px; }
 .import-panel .ip-logcontrols { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; margin-top: 8px; }
+
+/* Logs */
+.log-toolbar { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; color: var(--muted); }
+.log-toolbar label { float: none !important; width: auto !important; margin: 0 !important; }
+.log-toolbar select { min-height: 36px; padding: 0 8px; }
+table.display_log { width: 100% !important; border-collapse: collapse; background: var(--surface) !important; border: 1px solid var(--line) !important; font-size: 13px; }
+table.display_log th { padding: 10px 12px !important; text-align: left; }
+table.display_log td { padding: 6px 12px !important; border-bottom: 1px solid var(--line-soft) !important; vertical-align: top; font-family: var(--font-mono); }
+table.display_log td:nth-child(1) { white-space: nowrap; color: var(--muted); }
+table.display_log td:nth-child(2) { font-weight: 700; white-space: nowrap; }
+table.display_log td:nth-child(3) { overflow-wrap: anywhere; }
+table.display_log tr.gradeX td { background: color-mix(in srgb, var(--failed) 9%, var(--surface)) !important; }
+table.display_log tr.gradeX td:nth-child(2) { color: var(--failed-text); }
+table.display_log tr.gradeW td:nth-child(2) { color: var(--snatched); }
+table.display_log tr.gradeZ td, table.display_log tr.gradeW td { background: var(--surface) !important; }
 
 /* ---------- Ctrl K jump menu ---------- */
 

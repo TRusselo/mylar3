@@ -4830,6 +4830,13 @@ class WebInterface(object):
 
             resultlist.append(tmplist)
 
+        status_counts = {}
+        for row in resultlist:
+            status_counts[row['Status']] = status_counts.get(row['Status'], 0) + 1
+        status = kwargs.get('status')
+        if status:
+            resultlist = [row for row in resultlist if row['Status'] == status]
+
         filtered = []
         if sSearch == "" or sSearch == None:
             filtered = resultlist[::]
@@ -4878,6 +4885,7 @@ class WebInterface(object):
             'iTotalDisplayRecords': len(filtered),
             'iTotalRecords': len(resultlist),
             'aaData': rows,
+            'statusCounts': status_counts,
         })
     loadhistory.exposed = True
 
