@@ -50,7 +50,7 @@
 	<table class="display" id="manage_comic">
 		<thead>
 			<tr>
-				<th id="select"><input type="checkbox" onClick="toggle(this);updateSelectedCount();" /></th>
+				<th id="select"><input type="checkbox" id="select_all" title="Select every series that matches the filter" /></th>
 				<th id="albumart"></th>
 				<th id="name">Comic Name</th>
 				<th id="status">Status</th>
@@ -62,50 +62,7 @@
 				<th id="lastupdated">Updated</th>
 			</tr>
 		</thead>
-		<tbody>
-		%for comic in comics:
-                        <%
-
-			        if comic['percent'] == 101:
-                                        css = '<div class=\"progress-container warning\">'
-                                if comic['percent'] == 100:
-                                        css = '<div class=\"progress-container complete\">'
-                                if comic['percent'] < 100:
-                                        css = '<div class=\"progress-container missing\">'
-			        
-			        if comic['Status'] == 'Paused':
-                                        grade = 'X'
-                                elif comic['Status'] == 'Loading':
-                                        grade = 'L'
-                                elif comic['Status'] == 'Error':
-                                        grade = 'X'
-                                else:
-                                        grade = 'A'
-                        %>
-			<tr>
-				<td id="select"><input type="checkbox" name="${comic['ComicName']}[${comic['ComicYear']}]" value="${comic['ComicID']}" class="checkbox" onchange="updateSelectedCount()" /></td>
-				<td id="albumart"><div><img src="${comic['ComicImage']}" height="75" width="50"></div></td>
-				<td id="name"><span title="${comic['ComicSortName']}"></span><a href="comicDetails?ComicID=${comic['ComicID']}">${comic['ComicName']} (${comic['ComicYear']})</a></td>
-				<td id="status">${comic['recentstatus']}</td>
-                                <td id="stat_icon">
-                                %if comic['Status'] == 'Paused':
-                                    <img src="images/pause-icon.png" title="Paused" alt="Paused" width="16" height="16" />
-                                %elif comic['Status'] == 'Loading':
-                                    <img src="images/hourglass.png" title="Loading" alt="Loading" width="16" height="16" />
-                                %elif comic['Status'] == 'Error':
-                                    <img src="images/cross.png" title="Error" alt="Error" width="16" height="16" />
-                                %else:
-                                    <img src="images/checkmark.png" title="Active" alt="Active" width="16" height="16" />
-                                %endif
-                                </td>
-                                <td class="hidden" id="stat_title">${comic['Status']}</td>
-				<td id="latest">${comic['LatestIssue']} (${comic['LatestDate']})</td>
-                                <td id="publisher">${comic['ComicPublisher']}</td>
-                                <td id="have" valign="center" data-order="${comic['percent'] or 0}"><span title="${comic['percent']}"></span>${css}<div style="width:${comic['percent']}%"><div style="width:${comic['percent']}%"><div class="havetracks">${comic['haveissues']}/${comic['totalissues']}</div></div></div></td>
-				<td id="lastupdated">${comic['DateAdded']}</td>
-			</tr>
-		%endfor
-		</tbody>
+		<tbody></tbody>
 	</table>
 	</div>
 	</form>
@@ -121,20 +78,42 @@
         <script src="js/libs/full_numbers_no_ellipses.js"></script>
 	<script>
 
+        // Rows are loaded as JSON and only the current page is drawn (deferRender) -
+        // building every series as html made the browser tab crash on big libraries.
+        var selected = {};   // ComicID -> 'ComicName[ComicYear]', the field name markComics expects
         var lastChecked = null;
         var pendingAction = null;
+        var table = null;
+        var cellIds = ['select', 'albumart', 'name', 'status', 'stat_icon', 'stat_title', 'latest', 'publisher', 'have', 'lastupdated'];
+        var statIcons = {'Paused': ['pause-icon.png', 'Paused'], 'Loading': ['hourglass.png', 'Loading'], 'Error': ['cross.png', 'Error']};
+
+        function esc(v) {
+                return $('<div/>').text(v == null ? '' : String(v)).html().replace(/"/g, '&quot;');
+        }
+
+        function text(v, type) {
+                return type === 'display' ? esc(v) : v;
+        }
 
         function updateSelectedCount() {
-                var count = $("#manage_comic input.checkbox:checked").length;
+                var count = Object.keys(selected).length;
                 $("#selected-count").text(count);
                 return count;
+        }
+
+        function setSelected(row, on) {
+                if (on) {
+                        selected[row.ComicID] = row.ComicName + '[' + row.ComicYear + ']';
+                } else {
+                        delete selected[row.ComicID];
+                }
         }
 
         function showConfirm(action, label) {
                 var count = updateSelectedCount();
                 if (count === 0) {
-                        var errorMsg = $(".action-buttons").attr('data-error') || "Pick at least one comic first.";
-                        alert(errorMsg);
+                        var errorMsg = $("#markComics").attr('data-error') || "Pick at least one comic first.";
+                        flash(errorMsg, 'error');
                         pendingAction = null;
                         return;
                 }
@@ -149,63 +128,126 @@
                 $('#action-confirm').addClass('hidden');
         }
 
+        function flash(message, cls) {
+                var feedback = $("#ajaxMsg");
+                var msg = $("<div class='msg'><span class='ui-icon ui-icon-" + (cls === 'error' ? 'alert' : 'check') + "'></span></div>");
+                msg.append(document.createTextNode(message));
+                feedback.addClass(cls).prepend(msg).fadeIn();
+                setTimeout(function(){
+                        msg.fadeOut(function(){
+                                $(this).remove();
+                                feedback.fadeOut(function(){ feedback.removeClass(cls); });
+                        });
+                }, 2000);
+        }
+
         function submitAction() {
                 if (!pendingAction) {
                         return;
                 }
-                $('#manage_action').val(pendingAction);
-                doAjaxCall('markComics',$('#markComics'),'table',true,'post');
+                var data = [{name: 'action', value: pendingAction}];
+                $.each(selected, function(id, key){ data.push({name: key, value: id}); });
                 hideConfirm();
+                $.ajax({url: 'markComics', type: 'post', data: $.param(data),
+                        success: function(){
+                                flash($("#markComics").attr('data-success') || 'Success!', 'success');
+                                selected = {};
+                                $('#select_all').prop('checked', false);
+                                updateSelectedCount();
+                                table.ajax.reload(null, false);
+                        },
+                        error: function(){
+                                flash('There was an error - check the logs.', 'error');
+                        }
+                });
+        }
+
+        function haveBar(percent, type, row) {
+                if (type !== 'display') {
+                        return percent || 0;
+                }
+                var css = percent === 101 ? 'warning' : (percent === 100 ? 'complete' : 'missing');
+                return '<span title="' + esc(percent) + '"></span><div class="progress-container ' + css + '"><div style="width:' + esc(percent) + '%">' +
+                       '<div style="width:' + esc(percent) + '%"><div class="havetracks">' + esc(row.haveissues) + '/' + esc(row.totalissues) + '</div></div></div></div>';
         }
 
         function initThisPage() {
                 $.fn.DataTable.ext.pager.numbers_length = 5;
-                $('#manage_comic').dataTable( {
+                var columns = [
+                        {data: 'ComicID', orderable: false, render: function(id, type){
+                                return type === 'display' ? '<input type="checkbox" class="checkbox"' + (selected[id] ? ' checked' : '') + ' />' : id; }},
+                        {data: 'ComicImage', orderable: false, render: function(img, type){
+                                return type === 'display' ? '<div><img src="' + esc(img) + '" height="75" width="50" loading="lazy"></div>' : img; }},
+                        {data: 'ComicName', render: function(name, type, row){
+                                if (type === 'sort') return row.ComicSortName || name;
+                                if (type !== 'display') return name + ' (' + row.ComicYear + ')';
+                                return '<a href="comicDetails?ComicID=' + encodeURIComponent(row.ComicID) + '">' + esc(name) + ' (' + esc(row.ComicYear) + ')</a>'; }},
+                        {data: 'recentstatus', render: text},
+                        {data: 'Status', render: function(status, type){
+                                if (type !== 'display') return status;
+                                var icon = statIcons[status] || ['checkmark.png', 'Active'];
+                                return '<img src="images/' + icon[0] + '" title="' + icon[1] + '" alt="' + icon[1] + '" width="16" height="16" />'; }},
+                        {data: 'Status', visible: false, render: text},
+                        {data: 'LatestIssue', render: function(issue, type, row){
+                                return type === 'display' ? esc(issue) + ' (' + esc(row.LatestDate) + ')' : issue + ' (' + row.LatestDate + ')'; }},
+                        {data: 'ComicPublisher', render: text},
+                        {data: 'percent', render: haveBar},
+                        {data: 'DateAdded', render: text}
+                ];
+                $.each(columns, function(i, col){
+                        col.defaultContent = '';
+                        col.createdCell = function(td){ td.id = cellIds[i]; };
+                });
+                table = $('#manage_comic').DataTable( {
                         "destroy": true,
                         "sDom": '<"clear"f><"clear"lp><"clear">rt<"clear"ip>',
+                        "ajax": {"url": "manageComicsData", "dataSrc": "data"},
                         "deferRender": true,
-                        "columnDefs": [
-                            { 'bSortable': false, 'aTargets': [ 0, 1 ] },
-                            { 'order': [[2, 'desc'],[3, 'desc']] }
-                        ],
-                        "lengthMenu": [[10, 25, 50, 100, 200, 500, -1], [10, 25, 50, 100, 200, 500, 'All' ]],
+                        "processing": true,
+                        "columns": columns,
+                        "order": [[2, 'asc']],
+                        "lengthMenu": [[10, 25, 50, 100, 200, 500], [10, 25, 50, 100, 200, 500]],
                         "language": {
                                 "lengthMenu":"Show _MENU_ results per page",
                                 "emptyTable": "No results",
                                 "info":"Showing _START_ to _END_ of _TOTAL_ results",
                                 "infoEmpty":"Showing 0 to 0 of 0 results",
                                 "infoFiltered":"(filtered from _MAX_ total results)",
+                                "processing": "Loading series...",
                                 "search" : ""},
                         "stateSave": true,
+                        "stateLoadParams": function(settings, data) {
+                                // an older saved 'All' would draw every row again
+                                if (!(data.length > 0 && data.length <= 500)) data.length = 25;
+                        },
                         "pageLength": 25,
-                        "pagingType": "simple_numbers"
+                        "pagingType": "simple_numbers",
+                        "drawCallback": function() { lastChecked = null; }
                 });
                 resetFilters("comic");
 
-                $('#manage_comic tbody').on('click', 'input[type="checkbox"]', function(e){
-                        var chkboxes = Array.from($(":checkbox"));
-            
-                        if (!lastChecked) {
-                            lastChecked = this;
-                        } else {
-                            if (e.shiftKey) {
-                                var start = chkboxes.indexOf(lastChecked);
-                                var end = chkboxes.indexOf(this);
-            
-                                var positive = start < end;
-            
-                                for (var i = (positive ? start: end );
-                                (positive ? i <= end : i <= start); i++) {
-                                    chkboxes[i].checked = lastChecked.checked;
-                                }
-                                lastChecked = null;
-                            }
-                            else {
-                                lastChecked = this;
-                            }
-                        }
+                $('#select_all').on('change', function(){
+                        var on = this.checked;
+                        table.rows({search: 'applied'}).data().each(function(row){ setSelected(row, on); });
+                        $('#manage_comic tbody input.checkbox').prop('checked', on);
                         updateSelectedCount();
-                    });
+                });
+
+                $('#manage_comic tbody').on('click', 'input.checkbox', function(e){
+                        var boxes = $('#manage_comic tbody input.checkbox').toArray();
+                        if (e.shiftKey && lastChecked && boxes.indexOf(lastChecked) !== -1) {
+                                var start = boxes.indexOf(lastChecked), end = boxes.indexOf(this);
+                                for (var i = Math.min(start, end); i <= Math.max(start, end); i++) {
+                                        boxes[i].checked = lastChecked.checked;
+                                }
+                        }
+                        lastChecked = this;
+                        $.each(boxes, function(i, box){
+                                setSelected(table.row($(box).closest('tr')).data(), box.checked);
+                        });
+                        updateSelectedCount();
+                });
+
                 $('.manage-action').on('click', function(){
                         var action = $(this).data('action');
                         var label = $(this).data('label') || $(this).text();

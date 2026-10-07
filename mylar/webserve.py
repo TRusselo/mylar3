@@ -4502,9 +4502,17 @@ class WebInterface(object):
     schedulerForceCheck.exposed = True
 
     def manageComics(self):
-        comics = helpers.havetotals()
-        return serve_template(templatename="managecomics.html", title="Manage Comics", comics=comics)
+        # rows come from manageComicsData; rendering thousands of rows into the html crashes the browser tab
+        return serve_template(templatename="managecomics.html", title="Manage Comics")
     manageComics.exposed = True
+
+    def manageComicsData(self, **kwargs):
+        keys = ('ComicID', 'ComicName', 'ComicYear', 'ComicSortName', 'ComicImage', 'recentstatus', 'Status',
+                'LatestIssue', 'LatestDate', 'ComicPublisher', 'percent', 'haveissues', 'totalissues', 'DateAdded')
+        rows = [{k: c[k] for k in keys} for c in helpers.havetotals()]
+        cherrypy.response.headers['Content-Type'] = 'application/json'
+        return json.dumps({'data': rows})
+    manageComicsData.exposed = True
 
     def manageIssues(self, **kwargs):
         status = kwargs['status']
