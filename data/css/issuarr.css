@@ -432,6 +432,9 @@ input.inline-num { width: 76px; min-height: 34px; padding: 0 8px; box-sizing: bo
 .collection-bar .seg-have { background: var(--have); }
 .collection-bar .seg-wanted { background: var(--wanted); }
 .collection-bar .seg-missing { background: var(--line); }
+.collection-bar .seg-snatched { background: var(--snatched); }
+.collection-bar .seg-failed { background: var(--failed); }
+.collection-bar .seg-ignored { background: var(--ignored); }
 
 .cover-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(156px, 1fr)); gap: 26px 20px; }
 .cover-grid[hidden] { display: none; }
@@ -499,6 +502,9 @@ table.dt tr.is-picked td { background: color-mix(in srgb, var(--text) 8%, var(--
 .legend i { width: 14px; height: 6px; border-radius: 3px; background: var(--line); }
 .legend i.is-have { background: var(--have); }
 .legend i.is-wanted { background: var(--wanted); }
+.legend i.is-snatched { background: var(--snatched); }
+.legend i.is-failed { background: var(--failed); }
+.legend i.is-ignored { background: var(--ignored); }
 .lib-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 22px; }
 
 /* ---------- Series page ---------- */
@@ -654,7 +660,7 @@ a.release-title:hover { text-decoration: underline; text-underline-offset: 3px; 
 .wp .wp-form fieldset { min-width: 0; padding: 18px 20px !important; border-radius: calc(var(--radius) * 1.3); background: var(--surface) !important; }
 .wp .wp-row { grid-template-columns: minmax(150px, 220px) minmax(0, 1fr); }
 .wp .wp-row > * { min-width: 0; }
-.wp .wp-row input[type="text"] { width: 100%; }
+.wp .wp-row input[name="root"], .wp .wp-row input[name="backup_dir"] { width: 100%; }
 @media (max-width: 640px) { .wp .wp-row { grid-template-columns: minmax(0, 1fr); } }
 .wp .wp-form legend { float: left; width: 100%; padding: 0 0 6px !important; font-family: var(--font-body); font-size: 16px; font-weight: 700; }
 .wp .wp-form legend + * { clear: both; }

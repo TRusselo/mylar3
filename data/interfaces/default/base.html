@@ -344,13 +344,13 @@
             if (e.data){
                 var data = JSON.parse(e.data);
                 var cid = retrieve_comicid();
-                if (data.status == 'mid-message-event' && data.comicid == cid && document.getElementById("page_name").value == 'series_detail'){
+                if (data.status == 'mid-message-event' && data.comicid == cid && pageName() == 'series_detail'){
                     reload_tabs();
                     if (data.comicname != null || data.comicname != 'None'){
                         title_loadings(data.comicname, data.seriesyear, data.comicid, data.message);
                     }
                 } else {
-                    if (document.getElementById("page_name").value != 'series_detail' && data.comicid != cid && data.status != 'mid-message-event') {
+                    if (pageName() != 'series_detail' && data.comicid != cid && data.status != 'mid-message-event') {
                         console.log('addbyid:'+data.status, data.comicid, data.table, data.message);
                         $('#ajaxMsg').removeClass();
                         var dspline = '</br></br><input type="button" value="View Series" onclick="location.href=\'comicDetails?ComicID='+data.comicid+'\';"/>';
@@ -463,7 +463,7 @@
                         $('#ajaxMsg').html("<div class='msg'><center>"+data.message+"</center></div>");
                     }
                     var cid = retrieve_comicid();
-                    var tt = document.getElementById("page_name");
+                    var tt = { value: pageName() };
                     if (data.status == 'success'){
                         $('#ajaxMsg').addClass('success').fadeIn().delay(3000).fadeOut();
                         console.log('data.comicid:'+data.comicid)
@@ -478,7 +478,7 @@
                         if ( (data.tables == 'both' || data.tables == 'tabs') && ( tt.value != "config") ) {
                             reload_tabs();
                         }
-                        if( data.comicid == cid && document.getElementById("page_name").value == 'series_detail'){
+                        if( data.comicid == cid && pageName() == 'series_detail'){
                             console.log('title_loading...');
                             if (data.comicname != null || data.comicname != 'None'){
                                 title_loadings(data.comicname, data.seriesyear, data.comicid, data.message);
@@ -497,7 +497,7 @@
                         if (data.tables == 'both' || data.tables == 'tabs'){
                             reload_tabs();
                         }
-                        if( data.comicid == cid && document.getElementById("page_name").value == 'series_detail' ){
+                        if( data.comicid == cid && pageName() == 'series_detail' ){
                             if (data.comicname != null || data.comicname != 'None'){
                                 title_loadings(data.comicname, data.seriesyear, data.comicid);
                             }
@@ -506,6 +506,12 @@
                 }
             }
         }, false);
+
+        // Not every page has the hidden page_name field; the push handlers below must not throw without it.
+        function pageName() {
+            var el = document.getElementById("page_name");
+            return el ? el.value : '';
+        }
 
         function retrieve_comicid() {
             try {
@@ -598,7 +604,7 @@
         }
 
         function title_loadings(series_c_name,series_c_year, series_comicid, s_message) {
-            var tt = document.getElementById("page_name");
+            var tt = { value: pageName() };
             if (tt.value == "series_detail"){
                 ignore_block = false;
                 if (typeof(s_message) != 'undefined' && s_message != null){
