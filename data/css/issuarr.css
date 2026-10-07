@@ -122,10 +122,7 @@ div.alphabet span.active { color: var(--text) !important; font-weight: 700; text
 .sb-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 2px 0 6px; }
 .brand { display: flex; align-items: center; gap: 10px; color: var(--text); }
 .brand:hover { text-decoration: none; color: var(--text); }
-.brand-mark {
-  width: 26px; height: 26px; border-radius: 6px; background: var(--text); color: var(--ink);
-  display: grid; place-items: center; font-family: var(--font-mono); font-weight: 700; font-size: 15px; line-height: 1;
-}
+.brand-mark { display: block; flex: none; width: 28px; height: 28px; border-radius: 7px; box-shadow: 0 0 0 1px color-mix(in srgb, var(--line) 70%, transparent); }
 .brand-name { font-family: var(--font-display); font-stretch: 125%; font-weight: 800; font-size: 18px; letter-spacing: -0.01em; }
 
 .icon-btn {

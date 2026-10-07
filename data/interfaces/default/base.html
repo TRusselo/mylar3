@@ -70,7 +70,7 @@
 	<meta charset="UTF-8" />
 	<title>Issuarr${_instance | h} - ${title | h}</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-	<link rel="apple-touch-icon" href="images/mylarlogo.png" />
+	<link rel="apple-touch-icon" href="images/issuarr-touch.png" />
 	<link rel="icon" href="images/favicon.ico" type="image/x-icon" />
 	<link rel="stylesheet" type="text/css" href="interfaces/${interface}/css/style.css?v=${mylar.CURRENT_VERSION}" />
 	<link rel="stylesheet" href="interfaces/${interface}/css/jquery-ui.css">
@@ -93,7 +93,7 @@
 	<div id="updatediv"></div>
 	<div class="app">
 		<div class="topbar">
-			<a href="home" class="brand"><span class="brand-mark" aria-hidden="true">#</span><span class="brand-name">Issuarr</span></a>
+			<a href="home" class="brand"><img class="brand-mark" src="images/issuarr-mark.png" alt="" width="28" height="28" /><span class="brand-name">Issuarr</span></a>
 			<div style="display: flex; gap: 4px">
 				<button type="button" class="icon-btn" data-ui data-action="jump" aria-label="Search or jump to"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
 				<button type="button" class="icon-btn" data-ui id="nav-toggle" aria-label="Menu" aria-expanded="false" aria-controls="sidebar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
@@ -103,7 +103,7 @@
 
 		<nav class="sidebar" id="sidebar" aria-label="Main">
 			<div class="sb-head">
-				<a href="home" class="brand"><span class="brand-mark" aria-hidden="true">#</span><span class="brand-name">Issuarr</span></a>
+				<a href="home" class="brand"><img class="brand-mark" src="images/issuarr-mark.png" alt="" width="28" height="28" /><span class="brand-name">Issuarr</span></a>
 				<button type="button" class="icon-btn" data-ui id="notifs" onclick="manageNotifications()" aria-label="Notifications" title="Notifications (Alt+N)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></button>
 			</div>
 			<button type="button" class="jump-btn" data-ui data-action="jump" aria-haspopup="dialog">Search or jump to…<kbd>Ctrl K</kbd></button>
