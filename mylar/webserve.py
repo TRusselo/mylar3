@@ -79,6 +79,7 @@ from mylar import (
     sabparse,
     search,
     series_metadata,
+    ui,
     updater,
     weeklypull,
 )
@@ -7302,6 +7303,10 @@ class WebInterface(object):
                     "http_root": mylar.CONFIG.HTTP_ROOT,
                     "http_pass": mylar.CONFIG.HTTP_PASSWORD,
                     "instance_name" : mylar.CONFIG.INSTANCE_NAME,
+                    "ui_theme": ui.theme(),
+                    "custom_css_enabled": helpers.checked(mylar.CONFIG.CUSTOM_CSS_ENABLED),
+                    "custom_css_url": ui.safe_stylesheet_url(mylar.CONFIG.CUSTOM_CSS_URL) or '',
+                    "custom_css": ui.read_custom_css(),
                     "enable_https": helpers.checked(mylar.CONFIG.ENABLE_HTTPS),
                     "https_cert": mylar.CONFIG.HTTPS_CERT,
                     "https_key": mylar.CONFIG.HTTPS_KEY,
@@ -7911,11 +7916,24 @@ class WebInterface(object):
                            'prowl_enabled', 'prowl_onsnatch', 'pushover_enabled', 'pushover_onsnatch', 'pushover_image', 'mattermost_enabled', 'mattermost_onsnatch', 'boxcar_enabled',
                            'boxcar_onsnatch', 'pushbullet_enabled', 'pushbullet_onsnatch', 'telegram_enabled', 'telegram_onsnatch', 'telegram_image', 'discord_enabled', 'discord_onsnatch', 'slack_enabled', 'slack_onsnatch',
                            'email_enabled', 'email_enc', 'email_ongrab', 'email_onpost', 'gotify_enabled', 'gotify_server_url', 'gotify_token', 'gotify_onsnatch', 'opds_enable', 'opds_authentication', 'opds_metainfo', 'opds_pagesize', 'enable_ddl',
-                           'enable_getcomics', 'enable_flaresolverr', 'enable_airdcpp', 'jd2_enable', 'enable_external_server', 'ddl_prefer_upscaled', 'ddl_main_large_last', 'deluge_pause'] #enable_public
+                           'enable_getcomics', 'enable_flaresolverr', 'enable_airdcpp', 'jd2_enable', 'enable_external_server', 'ddl_prefer_upscaled', 'ddl_main_large_last', 'deluge_pause',
+                           'custom_css_enabled'] #enable_public
 
         for checked_config in checked_configs:
             if checked_config not in kwargs:
                 kwargs[checked_config] = False
+
+        custom_css = kwargs.pop('custom_css', None)
+        if custom_css is not None:
+            try:
+                ui.write_custom_css(custom_css)
+            except (ValueError, OSError) as e:
+                logger.warn('Unable to save the custom CSS: %s' % e)
+        if 'custom_css_url' in kwargs and kwargs['custom_css_url'] and not ui.safe_stylesheet_url(kwargs['custom_css_url']):
+            logger.warn('Ignoring the custom stylesheet URL - it must start with http://, https:// or /')
+            kwargs['custom_css_url'] = ''
+        if 'ui_theme' in kwargs and str(kwargs['ui_theme']).lower() not in ui.THEMES:
+            kwargs['ui_theme'] = 'dark'
 
         for k, v in kwargs.items():
             try:
@@ -8039,6 +8057,24 @@ class WebInterface(object):
                    review_dir=archives.review_dir(), now=time.time())
         return json.dumps(out)
     pp_activity.exposed = True
+
+    def custom_css(self, **kwargs):
+        cherrypy.response.headers['Content-Type'] = 'text/css; charset=utf-8'
+        cherrypy.response.headers['Cache-Control'] = 'no-cache'
+        return ui.read_custom_css()
+    custom_css.exposed = True
+
+    def jump_series(self, q=None, **kwargs):
+        # Series lookup for the Ctrl K jump menu.
+        cherrypy.response.headers['Content-Type'] = 'application/json'
+        q = (q or '').strip()
+        if len(q) < 2:
+            return json.dumps([])
+        like = '%' + q.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_') + '%'
+        myDB = db.DBConnection()
+        rows = myDB.select("SELECT ComicID, ComicName, ComicYear, ComicPublisher FROM comics WHERE ComicName LIKE ? ESCAPE '\\' ORDER BY ComicSortName LIMIT 8", [like])
+        return json.dumps([{'id': r['ComicID'], 'name': r['ComicName'], 'year': r['ComicYear'], 'publisher': r['ComicPublisher']} for r in rows])
+    jump_series.exposed = True
 
     def SABtest(self, sabhost=None, sabusername=None, sabpassword=None, sabapikey=None):
         if sabhost is None:

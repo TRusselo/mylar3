@@ -47,6 +47,7 @@
 			<li><a href="#tabs-4">Search providers</a></li>
 			<li><a href="#tabs-5">Quality &amp; Post Processing</a></li>
 			<li><a href="#tabs-6">Advanced Settings</a></li>
+			<li><a href="#tabs-7">Appearance</a></li>
 		</ul>
 
         <div id="tabs-1">
@@ -1879,7 +1880,57 @@
 	       </td>
              </tr>
         </table>
-    </div>	
+    </div>
+    <div id="tabs-7">
+        <div class="appearance">
+            <section aria-labelledby="ap-theme">
+                <h2 id="ap-theme" class="sr-only">Theme</h2>
+                <div class="set-row">
+                    <div class="set-label"><b>Theme</b><span>Match system follows your device's light or dark setting.</span></div>
+                    <div class="seg" role="radiogroup" aria-label="Theme">
+                        %for _v, _l in (('dark', 'Dark'), ('light', 'Light'), ('system', 'Match system')):
+                        <label><input type="radio" name="ui_theme" value="${_v}" ${'checked' if config['ui_theme'] == _v else ''} /><span>${_l}</span></label>
+                        %endfor
+                    </div>
+                </div>
+            </section>
+            <section aria-labelledby="ap-css">
+                <div class="set-row">
+                    <div class="set-label"><h2 id="ap-css" style="margin: 0 0 4px">Custom CSS</h2><span>Your own styling, loaded after the built-in theme on every page. Change the variables to recolour Issuarr, or write any CSS you like.</span></div>
+                    <label class="set-switch"><input type="checkbox" name="custom_css_enabled" value="1" ${config['custom_css_enabled']} /> Use custom CSS</label>
+                </div>
+                <div class="css-wrap">
+                    <div class="css-main">
+                        <label for="custom_css" class="sr-only">Custom CSS</label>
+                        <textarea id="custom_css" name="custom_css" class="css-editor" data-ui spellcheck="false" rows="18" placeholder="/* For example */&#10;:root {&#10;  --wanted: #FF7A59;&#10;  --radius: 4px;&#10;}">${config['custom_css'] | h}</textarea>
+                        <div class="css-bar">
+                            <span id="css-check" class="css-check" aria-live="polite"></span>
+                            <div class="css-tools">
+                                <label class="set-switch"><input type="checkbox" id="css-preview" /> Preview on this page</label>
+                                <button type="button" id="css-import">Import .css file</button>
+                                <input type="file" id="css-file" accept=".css,text/css" hidden />
+                                <button type="button" id="css-export">Export</button>
+                                <button type="button" id="css-reset">Start over</button>
+                            </div>
+                        </div>
+                        <div class="set-row">
+                            <label class="set-label" for="custom_css_url"><b>Stylesheet from a URL</b><span>Optional, for a theme hosted elsewhere. Loads before the CSS above. Must start with https://, http:// or /.</span></label>
+                            <input type="url" id="custom_css_url" name="custom_css_url" value="${config['custom_css_url'] | h}" placeholder="https://example.com/issuarr-theme.css" size="44" />
+                        </div>
+                        <div class="css-note">
+                            <span>If your CSS makes Issuarr hard to use, add <code>?nocss=1</code> to any page address. That page loads without it so you can come back here and fix it: <a href="config?nocss=1#tabs-7">open this page without custom CSS</a>.</span>
+                        </div>
+                    </div>
+                    <div class="css-side">
+                        <b>Variables you can set</b>
+                        <table class="css-vars"><tbody id="css-vars-body"></tbody></table>
+                        <small>These variables, and the classes <code>.sidebar</code>, <code>.nav-link</code>, <code>.nav-child</code>, <code>.page-head</code> and <code>.dock</code>, stay the same between versions. Other class names may change.</small>
+                    </div>
+                </div>
+            </section>
+            <p class="set-saved-note">Theme and CSS changes apply as soon as you save. No restart needed.</p>
+        </div>
+    </div>
         <input type="button" value="Save Changes" onclick="doAjaxCall('configUpdate',$(this),'tabs',true,'post');return false;" data-success="Changes saved successfully">
         <div class="message">
         	<p><span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>Web Interface changes require a restart to take effect</p>

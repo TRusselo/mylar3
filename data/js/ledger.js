@@ -81,10 +81,18 @@
     });
   });
 
+  // The sidebar opens this page as Ledger (no hash) or Tools > Trades (#trades).
+  function tabFromHash() { return location.hash === '#trades' ? 'collected' : 'missing'; }
   function setTab(t) {
     st.tab = t; st.sel = {}; st.limit = 300; st.sort = null; save();
     $id('lg-tab-missing').setAttribute('aria-selected', t === 'missing');
     $id('lg-tab-collected').setAttribute('aria-selected', t === 'collected');
+    if (tabFromHash() !== t) history.replaceState(null, '', t === 'collected' ? '#trades' : location.pathname + location.search);
+    if (window.issuarrMarkNav) window.issuarrMarkNav();
+    $('.lg-title').text(t === 'collected' ? 'Trades' : 'Ledger');
+    $id('lg-sub').textContent = t === 'collected'
+      ? 'Trade paperbacks in your library, and how they overlap the single issues you own.'
+      : 'Issues missing from the series you follow.';
     var go = function () { tiles(); filters(); render(); buildBar(); };
     if (t === 'missing') { if (M) go(); else load('missing', function (d) { M = d; go(); }); }
     else { if (C) go(); else load('collected', function (d) { C = d; go(); }); }
@@ -381,5 +389,6 @@
 
   $id('lg-by-issue').setAttribute('aria-pressed', st.by === 'issue');
   $id('lg-by-series').setAttribute('aria-pressed', st.by === 'series');
-  setTab(st.tab);
+  setTab(tabFromHash());
+  window.addEventListener('hashchange', function () { if (tabFromHash() !== st.tab) setTab(tabFromHash()); });
 })();
