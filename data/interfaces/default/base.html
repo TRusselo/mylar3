@@ -46,8 +46,8 @@
 	            ('WebP conversion', 'webpConvert', 'webpconvert'),
 	            ('Export', 'manage#tabs-3', 'manage#tabs-3'),
 	        ]),
-	        dict(label='Tasks', href='manage#tabs-4', children=[
-	            ('Jobs', 'manage#tabs-4', 'manage#tabs-4'),
+	        dict(label='Tasks', href='tasks', children=[
+	            ('Jobs', 'tasks', 'tasks'),
 	            ('Logs', 'logs', 'logs'),
 	        ]),
 	    ]),
@@ -161,10 +161,10 @@
 
 			<div class="dock" id="dock">
 				<div class="dock-title">Running now</div>
-				<a class="dock-row" id="import_indicator" href="manage#tabs-4" style="display:none"><span class="ii-spin"></span><span class="ii-text"></span></a>
-				<a class="dock-row" id="dock-pp" href="manage#tabs-4" hidden><span class="dot"></span><span class="dock-text"></span></a>
+				<a class="dock-row" id="import_indicator" href="tasks" style="display:none"><span class="ii-spin"></span><span class="ii-text"></span></a>
+				<a class="dock-row" id="dock-pp" href="tasks" hidden><span class="dot"></span><span class="dock-text"></span></a>
 				<a class="dock-row" id="dock-dl" href="queueManage" hidden><span class="dot"></span><span class="dock-text"></span></a>
-				<a class="dock-row is-idle" id="dock-monitor" href="manage#tabs-4" hidden><span class="dot is-idle"></span><span class="dock-text"></span></a>
+				<a class="dock-row is-idle" id="dock-monitor" href="tasks" hidden><span class="dot is-idle"></span><span class="dock-text"></span></a>
 				<div class="dock-row is-idle" id="dock-idle"><span class="dot is-idle"></span><span>Nothing running</span></div>
 			</div>
 

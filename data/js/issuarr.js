@@ -23,6 +23,36 @@
   }
   function mark() { return window.issuarrMarkNav ? window.issuarrMarkNav() : null; }
 
+  // Helpers shared by the rebuilt pages.
+  function esc(t) {
+    return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function span(secs) {
+    secs = Math.abs(secs);
+    if (secs < 60) return 'under a minute';
+    var m = Math.round(secs / 60);
+    if (m < 60) return m + ' min';
+    var h = Math.round(m / 60);
+    if (h < 48) return h + ' h';
+    return Math.round(h / 24) + ' days';
+  }
+  function relTime(epoch) {
+    if (!epoch) return '';
+    var d = epoch - Date.now() / 1000;
+    if (Math.abs(d) < 45) return 'now';
+    return d > 0 ? 'in ' + span(d) : span(d) + ' ago';
+  }
+  function clock(epoch) {
+    if (!epoch) return '';
+    var t = new Date(epoch * 1000);
+    var today = new Date();
+    var time = t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return t.toDateString() === today.toDateString() ? time : t.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + time;
+  }
+  window.Issuarr = { esc: esc, toast: toast, relTime: relTime, clock: clock };
+
   /* ---------- Pages whose tab strip moved into the sidebar ---------- */
 
   var TABBED = { manage: true, config: true };

@@ -3958,93 +3958,9 @@ class WebInterface(object):
         return json.dumps({'status': True, 'message': linemessage})
     ddl_requeue.exposed = True
 
-    def queueManage(self): # **args):
-        myDB = db.DBConnection()
-
-        resultlist = 'There are currently no items waiting in the Direct Download (DDL) Queue for processing.'
-        s_info = myDB.select("SELECT a.ComicName, a.ComicVersion, a.ComicID, a.ComicYear, b.Issue_Number, b.IssueID, c.series as filename, c.size, c.status, c.id, c.updated_date, c.issues, c.year, c.pack FROM comics as a INNER JOIN issues as b ON a.ComicID = b.ComicID INNER JOIN ddl_info as c ON b.IssueID = c.IssueID") # WHERE c.status != 'Downloading'")
-        o_info = myDB.select("Select a.ComicName, b.Issue_Number, a.IssueID, a.ComicID, c.series as filename, c.size, c.status, c.id, c.updated_date, c.issues, c.year, c.pack from oneoffhistory a join snatched b on a.issueid=b.issueid join ddl_info c on b.issueid=c.issueid where b.provider like 'DDL%'")
-        tmp_list = {}
-        if s_info:
-            resultlist = []
-            for si in s_info:
-                if si['issues'] is None:
-                    issue = si['Issue_Number']
-                    year = si['ComicYear']
-                    if issue is not None:
-                        issue = '#%s' % issue
-                else:
-                    year = si['year']
-                    issue = '#%s' % si['issues']
-
-                if si['pack']:
-                    series = si['filename']
-                else:
-                    series = si['ComicName']
-
-                if si['status'] == 'Completed':
-                    si_status = '100%'
-                else:
-                    si_status = ''
-                resultlist.append({'series':       series,
-                                   'issue':        issue,
-                                   'id':           si['id'],
-                                   'volume':       si['ComicVersion'],
-                                   'year':         year,
-                                   'size':         si['size'].strip(),
-                                   'comicid':      si['ComicID'],
-                                   'issueid':      si['IssueID'],
-                                   'status':       si['status'],
-                                   'updated_date': si['updated_date'],
-                                   'progress':     si_status})
-                tmp_list[si['id']] = {
-                                     'comicid': si['comicid'],
-                                     'issueid': si['issueid'],
-                                     'updated_date': si['updated_date']
-                                     }
-            #logger.info('s_info: %s' % (resultlist))
-        if o_info:
-            if type(resultlist) is str:
-                resultlist = []
-
-            for oi in o_info:
-                if oi['id'] in tmp_list:
-                    continue
-
-                if oi['issues'] is None:
-                    issue = oi['Issue_Number']
-                    year = oi['year']
-                    if issue is not None:
-                        issue = '#%s' % issue
-                else:
-                    year = oi['year']
-                    issue = '#%s' % oi['issues']
-
-                if oi['pack']:
-                    series = oi['filename']
-                else:
-                    series = oi['ComicName']
-
-                if oi['status'] == 'Completed':
-                    oi_status = '100%'
-                else:
-                    oi_status = ''
-
-                resultlist.append({'series':       series,
-                                   'issue':        issue,
-                                   'id':           oi['id'],
-                                   'volume':       None,
-                                   'year':         year,
-                                   'size':         oi['size'].strip(),
-                                   'comicid':      oi['ComicID'],
-                                   'issueid':      oi['IssueID'],
-                                   'status':       oi['status'],
-                                   'updated_date': oi['updated_date'],
-                                   'progress':     oi_status})
-
-            #logger.info('o_info: %s' % (resultlist))
-
-        return serve_template(templatename="queue_management.html", title="Queue Management", resultlist=resultlist) #activelist=activelist, resultlist=resultlist)
+    def queueManage(self):
+        # The page loads its rows from queueManageIt and check_ActiveDDL.
+        return serve_template(templatename="queue_management.html", title="Queue")
     queueManage.exposed = True
 
     def queueManageIt(self, iDisplayStart=0, iDisplayLength=100, iSortCol_0=5, sSortDir_0="desc", sSearch="", **kwargs):
@@ -4158,6 +4074,11 @@ class WebInterface(object):
 
             #logger.info('o_info: %s' % (resultlist))
 
+        if isinstance(resultlist, str):
+            resultlist = []
+        status = kwargs.get('status')
+        if status:
+            resultlist = [row for row in resultlist if row['status'] == status]
         if sSearch == "" or sSearch == None:
             filtered = resultlist[::]
         else:
@@ -4311,69 +4232,76 @@ class WebInterface(object):
                      'imp_seriesfolders': helpers.checked(mylar.CONFIG.IMP_SERIESFOLDERS)}
 
         mylarRoot = mylar.CONFIG.DESTINATION_DIR
-        myDB = db.DBConnection()
-        jobresults = myDB.select('SELECT DISTINCT * FROM jobhistory')
-        if jobresults is not None:
-            tmp = []
-            for jb in jobresults:
-                if jb['prev_run_datetime'] is not None:
-                    try:
-                        pr = (datetime.datetime.strptime(jb['prev_run_datetime'][:19], '%Y-%m-%d %H:%M:%S') - datetime.datetime.utcfromtimestamp(0)).total_seconds()
-                    except ValueError:
-                        pr = (datetime.datetime.strptime(jb['prev_run_datetime'], '%Y-%m-%d %H:%M:%S.%f') - datetime.datetime.utcfromtimestamp(0)).total_seconds()
-                    prev_run = datetime.datetime.fromtimestamp(pr)
-                else:
-                    prev_run = None
-                if jb['next_run_datetime'] is not None:
-                    try:
-                        nr = (datetime.datetime.strptime(jb['next_run_datetime'][:19], '%Y-%m-%d %H:%M:%S') - datetime.datetime.utcfromtimestamp(0)).total_seconds()
-                    except ValueError:
-                        nr = (datetime.datetime.strptime(jb['next_run_datetime'], '%Y-%m-%d %H:%M:%S.%f') - datetime.datetime.utcfromtimestamp(0)).total_seconds()
-                    next_run = datetime.datetime.fromtimestamp(nr)
-                else:
-                    next_run = None
-                if 'rss' in jb['JobName'].lower():
-                    #logger.fdebug('rss - job update. RSS_STATUS: %s / db: %s' % (mylar.RSS_STATUS, jb['Status']))
-                    status = mylar.RSS_STATUS
-                    interval = str(mylar.CONFIG.RSS_CHECKINTERVAL) + ' mins'
-                elif 'weekly' in jb['JobName'].lower():
-                    #logger.fdebug('weekly - job update. WEEKLY_STATUS: %s / db: %s' % (mylar.WEEKLY_STATUS, jb['Status']))
-                    status = mylar.WEEKLY_STATUS
-                    if mylar.CONFIG.ALT_PULL == 2:
-                        interval = '4 hrs'
-                    else:
-                        interval = '24 hrs'
-                elif 'search' in jb['JobName'].lower():
-                    #logger.fdebug('search - job update. SEARCH_STATUS: %s / db: %s' % (mylar.SEARCH_STATUS, jb['Status']))
-                    status = mylar.SEARCH_STATUS
-                    interval = str(mylar.CONFIG.SEARCH_INTERVAL) + ' mins'
-                elif 'updater' in jb['JobName'].lower():
-                    #logger.fdebug('updater - job update. UPDATER_STATUS: %s / db: %s' % (mylar.UPDATER_STATUS, jb['Status']))
-                    status = mylar.UPDATER_STATUS
-                    interval = str(int(mylar.DBUPDATE_INTERVAL)) + ' mins'
-                elif 'folder' in jb['JobName'].lower():
-                    #logger.fdebug('monitor - job update. MONITOR_STATUS: %s / db: %s' % (mylar.MONITOR_STATUS, jb['Status']))
-                    status = mylar.MONITOR_STATUS
-                    interval = str(mylar.CONFIG.DOWNLOAD_SCAN_INTERVAL) + ' mins'
-                elif 'version' in jb['JobName'].lower():
-                    #logger.fdebug('version - job update. VERSION_STATUS: %s / db: %s' % (mylar.VERSION_STATUS, jb['Status']))
-                    status = mylar.VERSION_STATUS
-                    interval = str(mylar.CONFIG.CHECK_GITHUB_INTERVAL) + ' mins'
-
-                if prev_run is None:
-                    prev_run = '-----'
-                if any([next_run is None, status == 'Paused']):
-                    next_run = '-----'
-
-                tmp.append({'prev_run_datetime':  prev_run,
-                            'next_run_datetime': next_run,
-                            'interval': interval,
-                            'jobname': jb['JobName'],
-                            'status': status})
-            jobresults = tmp
-        queues = queue_info()
-        return serve_template(templatename="manage.html", title="Manage", mylarRoot=mylarRoot, jobs=jobresults, queues=queues, scan_info=scan_info)
+        return serve_template(templatename="manage.html", title="Manage", mylarRoot=mylarRoot, scan_info=scan_info)
     manage.exposed = True
+
+    JOB_ORDER = ('Auto-Search', 'RSS Feeds', 'Folder Monitor', 'Weekly Pullist', 'DB Updater', 'Check Version')
+    JOB_FORCE_IDS = {'Auto-Search': 'search', 'RSS Feeds': 'rss', 'Folder Monitor': 'monitor',
+                     'Weekly Pullist': 'weekly', 'DB Updater': 'updater', 'Check Version': 'version'}
+
+    @staticmethod
+    def _job_epoch(value):
+        # jobhistory stores UTC times as text, with or without microseconds.
+        if not value:
+            return None
+        for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%S.%f'):
+            try:
+                when = datetime.datetime.strptime(value if fmt.endswith('%f') else value[:19], fmt)
+            except ValueError:
+                continue
+            return (when - datetime.datetime.utcfromtimestamp(0)).total_seconds()
+        return None
+
+    def _job_rows(self):
+        """Scheduled jobs: name, live status, interval and run times (epoch seconds)."""
+        myDB = db.DBConnection()
+        rows = []
+        for jb in myDB.select('SELECT DISTINCT * FROM jobhistory'):
+            name = jb['JobName'] or ''
+            low = name.lower()
+            status, interval = jb['Status'], ''
+            if 'rss' in low:
+                status, interval = mylar.RSS_STATUS, '%s mins' % mylar.CONFIG.RSS_CHECKINTERVAL
+            elif 'weekly' in low:
+                status, interval = mylar.WEEKLY_STATUS, '4 hrs' if mylar.CONFIG.ALT_PULL == 2 else '24 hrs'
+            elif 'search' in low:
+                status, interval = mylar.SEARCH_STATUS, '%s mins' % mylar.CONFIG.SEARCH_INTERVAL
+            elif 'updater' in low:
+                status, interval = mylar.UPDATER_STATUS, '%s mins' % int(mylar.DBUPDATE_INTERVAL)
+            elif 'folder' in low:
+                status, interval = mylar.MONITOR_STATUS, '%s mins' % mylar.CONFIG.DOWNLOAD_SCAN_INTERVAL
+            elif 'version' in low:
+                status, interval = mylar.VERSION_STATUS, '%s mins' % mylar.CONFIG.CHECK_GITHUB_INTERVAL
+            next_ts = None if status == 'Paused' else self._job_epoch(jb['next_run_datetime'])
+            rows.append({'jobname': name, 'status': status, 'interval': interval,
+                         'prev_ts': self._job_epoch(jb['prev_run_datetime']), 'next_ts': next_ts})
+        order = {n: i for i, n in enumerate(self.JOB_ORDER)}
+        rows.sort(key=lambda r: (order.get(r['jobname'], len(order)), r['jobname']))
+        return rows
+
+    def _tasks_data(self):
+        jobs = []
+        for j in self._job_rows():
+            editable = self.JOB_INTERVALS.get(j['jobname'])
+            j['force'] = self.JOB_FORCE_IDS.get(j['jobname'])
+            j['minutes'] = getattr(mylar.CONFIG, editable[1], None) if editable else None
+            j['min_minutes'] = editable[2] if editable else None
+            jobs.append(j)
+        queues = []
+        for q in queue_info():
+            state = 'Up' if q.is_alive else ('Down' if q.is_alive is not None else 'Never started')
+            queues.append({'name': q.name, 'size': q.size, 'state': state})
+        return {'jobs': jobs, 'queues': queues, 'now': time.time()}
+
+    def tasks(self):
+        initial = json.dumps(self._tasks_data()).replace('</', '<\\/')
+        return serve_template(templatename="tasks.html", title="Tasks", tasks_initial=initial)
+    tasks.exposed = True
+
+    def tasks_data(self, **kwargs):
+        cherrypy.response.headers['Content-Type'] = 'application/json'
+        return json.dumps(self._tasks_data())
+    tasks_data.exposed = True
 
     JOB_INTERVALS = {'Auto-Search': ('search', 'SEARCH_INTERVAL', 360),
                      'RSS Feeds': ('rss', 'RSS_CHECKINTERVAL', 20),
@@ -9443,7 +9371,7 @@ class WebInterface(object):
                  else:
                      filelocation = os.path.join(mylar.CONFIG.DDL_LOCATION, active['filename'])
                  #logger.fdebug('after-checking file existance: %s' % filelocation)
-                 if os.path.exists(filelocation) is True:
+                 if filelocation and os.path.exists(filelocation) is True:
                      filesize = os.stat(filelocation).st_size
                      #logger.fdebug('filesize: %s / remote: %s' % (filesize, active['remote_filesize']))
                      remote_filesize = active['remote_filesize']
@@ -9464,7 +9392,10 @@ class WebInterface(object):
                                         'a_done':      filesize,
                                         'a_total':     int(remote_filesize),
                                         'a_id':        active['id']})
-                 statline = '%s does not exist.</br> This probably needs to be restarted (use the option in the GUI)' % filelocation
+                 if filelocation:
+                     statline = '%s does not exist.</br> This probably needs to be restarted (use the option in the GUI)' % filelocation
+                 else:
+                     statline = 'No download file yet for %s (%s).</br> If this doesn\'t change, restart the download.' % (active['series'], active['year'])
              else:
                  infoline = '%s (%s)' % (active['series'], active['year'])
                  statline = 'No filename assigned for %s.</br> This was probably never started successfully - you should restart the download (use the option in the GUI)' % infoline
