@@ -1,3 +1,5 @@
+<img width="571" height="571" alt="image" src="https://github.com/user-attachments/assets/ab2c575b-db53-489e-aba5-ffe01bc0debb" />
+
 # Issuarr
 
 [![Build & Publish Docker Image](https://github.com/TRusselo/mylar3/actions/workflows/docker_ghcr.yml/badge.svg?branch=trusselo)](https://github.com/TRusselo/mylar3/actions/workflows/docker_ghcr.yml)
@@ -5,6 +7,7 @@
 **Issuarr is an automated comic book collection manager.** Tell it which series you follow and it watches for new and missing issues, downloads them, files and renames them, tags them with metadata, and keeps track of what your collection has and lacks.
 
 It works with cbr and cbz files and gets its series and issue information from [ComicVine](https://comicvine.gamespot.com/). It downloads from Usenet, torrents or direct-download sites. You run it on your own computer or server and use it from a web browser.
+
 
 ## How it works
 
@@ -77,6 +80,13 @@ New issues of the series you follow arrive the same way, week after week.
 - **Docker**, or **Python 3** with `unrar` installed (needed to read cbr files).
 - At least one place to download from: a Newznab indexer plus SABnzbd or NZBGet, a Torznab indexer plus a torrent client, or GetComics direct download.
 - Optional: FlareSolverr (for GetComics) and JDownloader 2 (for mirror links).
+
+<img width="144" height="100" alt="library" src="https://github.com/user-attachments/assets/5727ca6c-643e-41e2-8fa1-02b8389f2abd" /><img width="144" height="100" alt="ledger series" src="https://github.com/user-attachments/assets/13241f68-2c42-41eb-aa6d-a3e60bd11127" /><img width="144" height="100" alt="wanted" src="https://github.com/user-attachments/assets/2444ea0e-275c-4f5c-8ca4-adc964e616ac" /><img width="144" height="100" alt="upcoming" src="https://github.com/user-attachments/assets/69b87e52-3dc9-4d63-9cc1-c7bdebfb4a82" /><img width="144" height="100" alt="trades" src="https://github.com/user-attachments/assets/8d19055f-a237-4d29-af5d-098df06aa9d1" /><img width="144" height="130" alt="webp" src="https://github.com/user-attachments/assets/3f8f698a-43bf-4ef3-b2c5-ef47b908fe0e" />
+
+
+
+
+
 
 ## Installation
 
@@ -188,6 +198,14 @@ Thank you to:
 - **evilhero**, for creating Mylar.
 - Everyone who contributed to [mylar3/mylar3](https://github.com/mylar3/mylar3/graphs/contributors) and [MylarComics/mylar3](https://github.com/MylarComics/mylar3/graphs/contributors), with code, by helping others, or by donating.
 - [ComicTagger](https://github.com/comictagger/comictagger), [ComicVine](https://comicvine.gamespot.com/), and [linuxserver.io](https://www.linuxserver.io/) for the container base.
+
+## The Backstory
+A couple years ago, I had a multi-drive failure on my unraid sever due to bad HDD power splitter cables. (dont add more splitters). I ended up with thousands of random corrupted files in my collection. almost 4000 of 33,000 files. I'd been putting off fixing it for a while not knowing where to start.  I recently put Claude at the task of sorting it out and getting mylar3 working and filling the gaps. After finding a few bugs in Mylar3, i submitted a few PRs, not being able to contact the dev team on discord. After submitting a few PRs, someone pointed me to the correct discord, and find out they are not working on mylar3 much more and will be moving on to new projects.
+
+I had 2 choices, fork and continue on my own, or find a new program. I heard there was a new project on the block, and checked it out, it was missing many features I needed, but did not want to step on the toes of a new, upcoming project, and I would rather not duplicate work that others are doing, plus, I think I would like to work with others on a dev project for the first time. So, I decided to reach out to him and offer my help porting missing features from mylar to his project, and help him build.
+My offer was promptly rejected. surprisingly rudely, actually.
+
+Here is Issuarr.  An AI rewrite, redesign and expansion of Mylar.
 
 ## License
 
