@@ -264,7 +264,7 @@ table.display tr.gradeZ, .Skipped, .Ignored { background: var(--surface) !import
 .ui-tabs .ui-tabs-nav li { background: none !important; border: 0 !important; margin: 0 !important; float: none !important; top: 0 !important; }
 .ui-tabs .ui-tabs-nav li a { padding: 10px 0 !important; border-bottom: 2px solid transparent; margin-bottom: -1px; float: none !important; color: var(--muted) !important; font-weight: 600; }
 .ui-tabs .ui-tabs-nav li.ui-tabs-active a, .ui-tabs .ui-tabs-nav li.ui-tabs-selected a, .ui-tabs .ui-tabs-nav li.ui-state-active a { color: var(--text) !important; border-bottom-color: var(--text); }
-.ui-tabs .ui-tabs-panel { padding: 0 !important; background: none !important; }
+.ui-tabs .ui-tabs-panel { padding: 0 !important; background: none !important; border: 0 !important; }
 
 #tabs, .ui-tabs, .ui-widget-content, fieldset, .table_wrapper, .configtable, #config_fields {
   background: var(--surface) !important; background-image: none !important; color: var(--text) !important; border-color: var(--line) !important;
@@ -548,17 +548,76 @@ table.dt tr.is-picked td { background: color-mix(in srgb, var(--text) 8%, var(--
 .issues-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin: 0 0 14px; }
 .issues-toolbar #checkboxControls { position: static; float: none; margin: 0; }
 .issue-filters { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Status filters: each chip toggles a status on or off; the checkbox stays for keyboard and screen readers. */
 .issue-filters label {
-  float: none !important; width: auto !important; margin: 0 !important; padding: 6px 12px 6px 9px; line-height: 2.1; white-space: nowrap; cursor: pointer;
-  border: 1px solid var(--line); border-radius: 999px; color: var(--text-2) !important; font-size: 13px; font-weight: 600;
+  position: relative; display: inline-flex; align-items: center; gap: 8px; min-height: 34px; box-sizing: border-box;
+  float: none !important; width: auto !important; margin: 0 !important; padding: 0 13px 0 11px; line-height: 1; white-space: nowrap; cursor: pointer;
+  border: 1px solid var(--line); border-radius: 999px; background: transparent !important; color: var(--muted) !important; font-size: 13px; font-weight: 600;
 }
-.issue-filters label input { width: 15px; height: 15px; margin: 0 6px 0 0; vertical-align: -2px; }
-.issue-filters label b { font-family: var(--font-mono); font-weight: 600; }
+.issue-filters label input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.issue-filters label::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--dot, var(--muted)); }
+.issue-filters label:has(input:checked) { background: var(--raised) !important; color: var(--text) !important; border-color: color-mix(in srgb, var(--dot, var(--muted)) 45%, var(--line)); }
+.issue-filters label:has(input:checked)::before { background: var(--dot, var(--muted)); }
+.issue-filters label:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
+.issue-filters label b { font-family: var(--font-mono); font-weight: 600; color: inherit; }
+.issue-filters .Wanted { --dot: var(--wanted); }
+.issue-filters .Downloaded, .issue-filters .Archived { --dot: var(--have); }
+.issue-filters .Snatched { --dot: var(--snatched); }
+.issue-filters .Failed { --dot: var(--failed); }
+.issue-filters .Ignored { --dot: var(--ignored); }
 .issues-toolbar #btn_container { float: none; width: auto; height: auto; }
 .issues-toolbar #btn_menu { float: none; margin: 0; text-align: left; }
 .issues-toolbar #btn_menu a { background-image: none !important; filter: none !important; font-family: var(--font-body); font-size: 13px; font-weight: 600; }
 #tabs-issues .dataTables_wrapper { max-width: 100%; overflow-x: auto; }
 .annuals-title { margin: 32px 0 12px; font-size: 20px; }
+
+/* Issue and annual tables: plain rows with a status pill instead of tinted rows. */
+#tabs-issues table.display tbody tr, #tabs-issues table.display tbody tr td { background: var(--surface) !important; }
+#tabs-issues table.display tbody tr:hover td { background: color-mix(in srgb, var(--raised) 60%, var(--surface)) !important; }
+#tabs-issues table.display th { padding: 10px 12px !important; }
+#tabs-issues table.display td { padding: 8px 12px !important; border-bottom: 1px solid var(--line-soft) !important; vertical-align: middle; }
+#tabs-issues table.display td:last-child { text-align: right; white-space: nowrap; }
+#tabs-issues table.display td:first-child input { width: 17px; height: 17px; }
+.issue-acts { display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.issue-acts > .btn-sm { min-width: 96px; }
+.issue-acts .row-menu { margin-left: 0; }
+.issue-acts .row-menu > summary.btn { min-width: 0 !important; padding: 0 10px; }
+.issue-markbar { margin-bottom: 10px; padding: 10px 14px !important; font-weight: 600; }
+.issue-markbar select { min-height: 34px; margin: 0 8px; padding: 0 8px; font: 600 14px var(--font-body); }
+.issue-markbar-more { display: inline-block; margin-left: 6px; }
+#tabs-issues table.display th, #tabs-issues table.display td { text-align: left !important; }
+#tabs-issues table.display th:last-child, #tabs-issues table.display td:last-child { text-align: right !important; }
+#tabs-issues table.display th, #tabs-issues table.display td { border-left: 0 !important; border-right: 0 !important; }
+#tabs-issues .table_wrapper { background: transparent !important; border: 0 !important; padding: 0 !important; }
+#tabs-issues table.display th:first-child, #tabs-issues table.display td:first-child { width: 28px; text-align: center !important; }
+#issue_table td:nth-child(2), #annual_table td:nth-child(3), #tabs-issues .date_edit, #tabs-issues td:nth-child(4) { white-space: nowrap; }
+@media (max-width: 600px) {
+  /* Phones: drop the name and date columns so number, status and actions fit without sideways scrolling. */
+  #issue_table th:nth-child(3), #issue_table td:nth-child(3), #issue_table th:nth-child(4), #issue_table td:nth-child(4),
+  #annual_table th:nth-child(4), #annual_table td:nth-child(4), #annual_table th:nth-child(5), #annual_table td:nth-child(5) { display: none; }
+  #tabs-issues table.display th, #tabs-issues table.display td { padding: 8px 6px !important; }
+  .issue-acts > .btn-sm { min-width: 0; }
+  #tabs-issues .dataTables_filter, #tabs-issues .dataTables_filter label, #tabs-issues .dataTables_filter input { width: 100% !important; }
+}
+#tabs-issues .date_edit { font-family: var(--font-mono); font-size: 13px; }
+
+/* Table controls: filter and page size above, count and paging below. */
+#tabs-issues .dt-top, #tabs-issues .dt-bottom { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+#tabs-issues .dt-top { margin: 0 0 12px; }
+#tabs-issues .dt-bottom { margin: 12px 0 0; }
+#tabs-issues .dt-top .dataTables_filter, #tabs-issues .dt-top .dataTables_length,
+#tabs-issues .dt-bottom .dataTables_info, #tabs-issues .dt-bottom .dataTables_paginate { float: none !important; width: auto !important; margin: 0 !important; padding: 0 !important; text-align: left !important; font-size: 13px; }
+#tabs-issues .dataTables_filter label, #tabs-issues .dataTables_length label { display: inline-flex; align-items: center; gap: 8px; margin: 0; }
+#tabs-issues .dataTables_filter input { width: min(320px, 70vw); min-height: 36px; margin: 0 !important; padding: 0 12px; box-sizing: border-box; }
+#tabs-issues .dataTables_length select { min-height: 34px; padding: 0 6px; margin: 0; }
+#tabs-issues .dataTables_paginate { display: flex; flex-wrap: wrap; gap: 4px; }
+#tabs-issues .dataTables_paginate .paginate_button { display: inline-flex; align-items: center; justify-content: center; min-width: 34px; min-height: 32px; padding: 0 10px !important; margin: 0 !important; box-sizing: border-box; font-size: 13px; font-weight: 600; cursor: pointer; }
+#tabs-issues .dataTables_paginate .paginate_button.disabled { opacity: .45; cursor: default; }
+#tabs-issues .dataTables_paginate span { display: contents; }
+#tabs-issues .dataTables_paginate .ellipsis { padding: 0 4px; align-self: center; }
+#tabs-issues .dataTables_processing { background: var(--raised) !important; color: var(--text) !important; border: 1px solid var(--line); border-radius: var(--radius); }
+#tabs-issues .dataTables_empty { padding: 28px 12px !important; text-align: center !important; color: var(--muted); }
+#tabs-issues .date_edit { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
 
 /* Settings tab: the hero already shows the cover and publisher. */
 .series-hero ~ #tabs #tabs-2 #mainimg, .series-hero ~ #tabs #tabs-2 img[align="right"] { display: none; }

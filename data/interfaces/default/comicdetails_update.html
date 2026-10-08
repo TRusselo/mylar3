@@ -424,13 +424,13 @@
    <div class="issues-toolbar">
     <div id="checkboxControls" name="checkboxControls">
      <div class="issue-filters" role="group" aria-label="Show issues with status">
-        <label for="Wanted" class="checkbox inline Wanted" id="wantedlabel" style="display:none;"><input type="checkbox" name="Wanted" id="Wanted" checked="checked" /> Wanted: <b><span id="wantedcount"></span></b></label>
-        <label for="Archived" class="checkbox inline Archived" id="archivedlabel" style="display:none;"><input type="checkbox" name="Archived" id="Archived" checked="checked" /> Archived: <b><span id="archivedcount"></span></b></label>
-        <label for="Downloaded" class="checkbox inline Downloaded" id="downloadedlabel" style="display:none;"><input type="checkbox" name="Downloaded" id="Downloaded" checked="checked" /> Downloaded: <b><span id="downloadedcount"></span></b></label>
-        <label for="Skipped" class="checkbox inline Skipped" id="skippedlabel" style="display:none;"><input type="checkbox" name="Skipped" id="Skipped" checked="checked" /> Skipped: <b><span id="skippedcount"></span></b></label>
-        <label for="Ignored" class="checkbox inline Ignored" id="ignoredlabel" style="display:none;"><input type="checkbox" name="Ignored" id="Ignored" checked="checked" /> Ignored: <b><span id="ignoredcount"></span></b></label>
-        <label for="Snatched" class="checkbox inline Snatched" id="snatchedlabel" style="display:none;"><input type="checkbox" name="Snatched" id="Snatched" checked="checked" /> Snatched: <b><span id="snatchedcount"></span></b></label>
-        <label for="Failed" class="checkbox inline Failed" id="failedlabel" style="display:none;"><input type="checkbox" name="Failed" id="Failed" checked="checked" /> Failed: <b><span id="failedcount"></span></b></label>
+        <label for="Wanted" class="checkbox inline Wanted" id="wantedlabel" style="display:none;"><input type="checkbox" name="Wanted" id="Wanted" checked="checked" /> Wanted <b><span id="wantedcount"></span></b></label>
+        <label for="Archived" class="checkbox inline Archived" id="archivedlabel" style="display:none;"><input type="checkbox" name="Archived" id="Archived" checked="checked" /> Archived <b><span id="archivedcount"></span></b></label>
+        <label for="Downloaded" class="checkbox inline Downloaded" id="downloadedlabel" style="display:none;"><input type="checkbox" name="Downloaded" id="Downloaded" checked="checked" /> Downloaded <b><span id="downloadedcount"></span></b></label>
+        <label for="Skipped" class="checkbox inline Skipped" id="skippedlabel" style="display:none;"><input type="checkbox" name="Skipped" id="Skipped" checked="checked" /> Skipped <b><span id="skippedcount"></span></b></label>
+        <label for="Ignored" class="checkbox inline Ignored" id="ignoredlabel" style="display:none;"><input type="checkbox" name="Ignored" id="Ignored" checked="checked" /> Ignored <b><span id="ignoredcount"></span></b></label>
+        <label for="Snatched" class="checkbox inline Snatched" id="snatchedlabel" style="display:none;"><input type="checkbox" name="Snatched" id="Snatched" checked="checked" /> Snatched <b><span id="snatchedcount"></span></b></label>
+        <label for="Failed" class="checkbox inline Failed" id="failedlabel" style="display:none;"><input type="checkbox" name="Failed" id="Failed" checked="checked" /> Failed <b><span id="failedcount"></span></b></label>
      </div>
     </div>
     <div id="btn_container">
@@ -443,7 +443,7 @@
 
      <div class="table_wrapper" id="issue_wrapper">
        <form action="mark_the_issues" method="get" id="markissues" name="markissues">
-        <div style="position:absolute;float:left;display:none;" id="markissue">Mark selected issues as
+        <div style="display:none;" id="markissue" class="issue-markbar">Mark the selected issues as
                 <select name="action" id="mark_issues" onChange="mark_the_issues('issues')" data-success="selected issues marked">
                         <option disabled="disabled" selected="selected">Choose...</option>
                         <option value="Wanted">Wanted</option>
@@ -456,13 +456,8 @@
                 </select>
                 <input type="hidden" value="Go">
                 %if any([mylar.CONFIG.ENABLE_META, mylar.CONFIG.CBR2CBZ_ONLY]):
-                    <div style="padding-left: 10px; float:right">
-                        <a id="metatag_issues" href="#" title="Perform metatagging on selected issues" onclick="metatag_the_issues(${comic['ComicID']}, 'issues')" 
-                            class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-icon-primary" role="button" aria-disabled="false" 
-                            style="background-image: -webkit-linear-gradient(#616161, #4e4e4e) !important;">
-                            <span class="ui-button-icon-primary ui-icon ui-icon-refresh"></span>
-                            <span class="ui-button-text" style="font-weight: normal;">MetaTag Issues</span>
-                        </a>
+                    <div class="issue-markbar-more">
+                        <a id="metatag_issues" href="#" class="btn btn-sm" title="Write ComicInfo metadata into the selected issues" onclick="metatag_the_issues(${comic['ComicID']}, 'issues'); return false;">Write metadata</a>
                     </div>     
                 %endif          
         </div>
@@ -495,7 +490,7 @@
     <div class="table_wrapper" id="annual_wrapper">
        <h2 class="annuals-title">Annuals</h2>
        <form action="mark_the_issues" method="get" id="markannuals" name="markannuals">
-        <div style="position:relative;float:left;display:none;" id="markannual">Mark selected annuals as
+        <div style="display:none;" id="markannual" class="issue-markbar">Mark the selected annuals as
                 <select name="action" id="mark_annuals" onChange="mark_the_issues('annuals')" data-success="selected annuals marked">
                         <option disabled="disabled" selected="selected">Choose...</option>
                         <option value="Wanted">Wanted</option>
@@ -509,13 +504,8 @@
                 selected annuals
                 <input type="hidden" value="Go">
                 %if any([mylar.CONFIG.ENABLE_META, mylar.CONFIG.CBR2CBZ_ONLY]):
-                    <div style="padding-left: 10px; float:right">
-                        <a id="metatag_issues" href="#" title="Perform metatagging on selected issues" onclick="metatag_the_issues(${comic['ComicID']}, 'annuals')" 
-                            class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-icon-primary" role="button" aria-disabled="false" 
-                            style="background-image: -webkit-linear-gradient(#616161, #4e4e4e) !important;">
-                            <span class="ui-button-icon-primary ui-icon ui-icon-refresh"></span>
-                            <span class="ui-button-text" style="font-weight: normal;">MetaTag Issues</span>
-                        </a>
+                    <div class="issue-markbar-more">
+                        <a id="metatag_issues" href="#" class="btn btn-sm" title="Write ComicInfo metadata into the selected issues" onclick="metatag_the_issues(${comic['ComicID']}, 'annuals'); return false;">Write metadata</a>
                     </div>   
                 %endif
         </div>
@@ -573,6 +563,49 @@
         </style>
         <script>
         var collapsedGroups = {};
+
+        // Issue and annual rows: a status pill, and the action that fits the status with the rest in a menu.
+        // The links keep the ids the click handler above dispatches on (queueit, retryit, ... with an "a" prefix for annuals).
+        var ISSUE_STATUS = { Downloaded: 'is-have', Archived: 'is-have', Wanted: 'is-wanted', Snatched: 'is-snatched', Failed: 'is-failed', Ignored: 'is-ignored' };
+        function escHtml(t) { return $('<div/>').text(t == null ? '' : String(t)).html(); }
+        function issueStatus(full, withSecondary) {
+            var st = full[3] || '';
+            var file = (st == 'Downloaded' || st == 'Archived') && full[5] ? full[5] + (full[6] ? ' (' + full[6] + ')' : '') : '';
+            var html = '<span class="status ' + (ISSUE_STATUS[st] || 'is-idle') + '"' + (file ? ' title="' + escHtml(file) + '"' : '') + '>' + escHtml(st) + '</span>';
+            if (withSecondary && full[11] == 'secondary') html += ' <span class="arc-out" title="The file is in the secondary folder">secondary</span>';
+            return html;
+        }
+        function issueActions(full, p) {
+            var st = full[3];
+            var meta = document.getElementById("meta_enabled").value == 'True' || document.getElementById("meta_cbr2cbz").value == 'True';
+            function main(id, label, title) { return '<a id="' + p + id + '" name="' + p + id + '" href="#" class="btn btn-sm" title="' + title + '">' + label + '</a>'; }
+            function item(id, label, title) { return '<a id="' + p + id + '" name="' + p + id + '" href="#" class="btn btn-ghost" title="' + title + '">' + label + '</a>'; }
+            var first = '', more = [];
+            if (st == 'Skipped' || st == 'Ignored') {
+                first = main('queueit', 'Want', 'Mark as Wanted');
+                more.push(item('manqueueit', 'Search now', 'Mark as Wanted and search right away'));
+            } else if (st == 'Wanted') {
+                first = main('manqueueit', 'Search now', 'Search for this issue now');
+                more.push(item('unqueueit', 'Skip', 'Mark as Skipped'));
+            } else if (st == 'Snatched') {
+                first = main('retryit', 'Retry', 'Try the same download again');
+                more.push(item('queueit', 'Mark wanted', 'Mark as Wanted'), item('manqueueit', 'Search again', 'Search for a different download'),
+                          item('unqueueit', 'Skip', 'Mark as Skipped'), item('failit', 'Mark failed', 'Mark the download as failed'));
+            } else if (st == 'Archived') {
+                first = main('queueit', 'Want', 'Mark as Wanted');
+                more.push(item('manqueueit', 'Search now', 'Mark as Wanted and search right away'), item('unqueueit', 'Skip', 'Mark as Skipped'));
+            } else if (st == 'Downloaded') {
+                if (!p) first = '<a class="btn btn-sm" href="downloadthis?issueid=' + encodeURIComponent(full[4]) + '" title="Download the file">Download</a>';
+                if (!p) more.push(item('readlistadd', 'Add to reading list', 'Add to the reading list'));
+                if (meta) more.push(item('metatag', 'Write metadata', 'Write ComicInfo metadata into the file'));
+                more.push(item('manqueueit', 'Search again', 'Search for a new copy'), item('unqueueit', 'Skip', 'Mark as Skipped'), item('failit', 'Mark failed', 'Mark the download as failed'));
+            } else {
+                first = main('manqueueit', 'Search now', 'Search for this issue now');
+            }
+            more.push('<a id="' + p + 'listbox" name="' + p + 'listbox" href="#issue-box" class="btn btn-ghost issue-window" title="Details read from ComicVine or the file">Issue details</a>');
+            return '<span class="issue-acts">' + first + '<details class="menu row-menu"><summary class="btn btn-sm btn-ghost" aria-label="More for #' + escHtml(full[0]) + '">⋯</summary>' +
+                   '<div class="menu-list">' + more.join('') + '</div></details></span>';
+        }
         $(document).ready(function() {
             $("#jeditable-activate").click(function() {
                $(this).prev().click();
@@ -675,7 +708,9 @@
         });
 
         // get the click value from the last column (options) where the filelisting option is present.
-        $('table.display').on('click', 'a', function() {
+        $('table.display').on('click', 'a', function(e) {
+            // Row actions are links to "#"; don't jump to the top of the page.
+            if ((this.getAttribute('href') || '').charAt(0) === '#' && this.id !== 'annual_link') e.preventDefault();
             if (!action && this.id == 'annual_link'){
                 return;
             }
@@ -956,7 +991,7 @@
                        alert('ERROR'+data.responseText);
                      },
             })).done(function(data) {
-                 //reload_table();
+                 reload_tables();
             });
         }                
 
@@ -1523,7 +1558,7 @@
                         obj_filters = obj['filters'];
                         wantedcount = document.getElementById("wantedlabel");
                         if (parseInt(obj_filters['wanted'], 10) > 0){
-                            wantedcount.style.display = "inline";
+                            wantedcount.style.display = "";
                             document.getElementById("wantedcount").innerHTML = obj_filters['wanted'];
                         } else if (parseInt(obj_filters['wanted'], 10) <= 0) {
                             document.getElementById("wantedcount").innerHTML = "";
@@ -1531,7 +1566,7 @@
                         }
                         downloadedcount = document.getElementById("downloadedlabel");
                         if (parseInt(obj_filters['downloaded'], 10) > 0){
-                            downloadedcount.style.display = "inline";
+                            downloadedcount.style.display = "";
                             document.getElementById("downloadedcount").innerHTML = obj_filters['downloaded'];
                         } else if (parseInt(obj_filters['downloaded'], 10) <= 0) {
                             document.getElementById("downloadedcount").innerHTML = "";
@@ -1539,7 +1574,7 @@
                         }
                         skippedcount = document.getElementById("skippedlabel");
                         if (parseInt(obj_filters['skipped'], 10) > 0){
-                            skippedcount.style.display = "inline";
+                            skippedcount.style.display = "";
                             document.getElementById("skippedcount").innerHTML = obj_filters['skipped'];
                             document.getElementById("skipped_2_enabled").style.display = "inline";
                         } else if (parseInt(obj_filters['skipped'], 10) <= 0) {
@@ -1549,7 +1584,7 @@
                         }
                         archivedcount = document.getElementById("archivedlabel");
                         if (parseInt(obj_filters['archived'], 10) > 0){
-                            archivedcount.style.display = "inline";
+                            archivedcount.style.display = "";
                             document.getElementById("archivedcount").innerHTML = obj_filters['archived'];
                         } else if (parseInt(obj_filters['archived'], 10) <= 0) {
                             document.getElementById("archivedcount").innerHTML = "";
@@ -1557,7 +1592,7 @@
                         }
                         snatchedcount = document.getElementById("snatchedlabel");
                         if (parseInt(obj_filters['snatched'], 10) > 0){
-                            snatchedcount.style.display = "inline";
+                            snatchedcount.style.display = "";
                             document.getElementById("snatchedcount").innerHTML = obj_filters['snatched'];
                         } else if (parseInt(obj_filters['snatched'], 10) <= 0) {
                             document.getElementById("snatchedcount").innerHTML = "";
@@ -1565,7 +1600,7 @@
                         }
                         ignoredcount = document.getElementById("ignoredlabel");
                         if (parseInt(obj_filters['ignored'], 10) > 0){
-                            ignoredcount.style.display = "inline";
+                            ignoredcount.style.display = "";
                             document.getElementById("ignoredcount").innerHTML = obj_filters['ignored'];
                         } else if (parseInt(obj_filters['ignored'], 10) <= 0) {
                             document.getElementById("ignoredcount").innerHTML = "";
@@ -1573,7 +1608,7 @@
                         }
                         failedcount = document.getElementById("failedlabel");
                         if (parseInt(obj_filters['failed'], 10) > 0){
-                            failedcount.style.display = "inline";
+                            failedcount.style.display = "";
                             document.getElementById("failedcount").innerHTML = obj_filters['failed'];
                         } else if (parseInt(obj_filters['failed'], 10) <= 0) {
                             document.getElementById("failedcount").innerHTML = "";
@@ -1630,7 +1665,7 @@
                         document.getElementById("markissue").style.display = "none";
                         document.getElementById("issues-select-all").checked = false;
                     },
-                    "sDom": '<"clear"f><"clear"lp><"clear">rt<"clear"ip>',
+                    "sDom": '<"dt-top"fl>rt<"dt-bottom"ip>',
                     "destroy": true,
                     "processing": true,
                     "serverSide": true,
@@ -1706,19 +1741,7 @@
                            "targets": [4],
                            "visible": true,
                            "render": function (data,type,full){
-                               if (full[3] == 'Downloaded' || full[3] == 'Archived'){
-                                   if (full[5] !== null){
-                                       response = '<center>' + full[3] + '<a href="#" title="' + full[5] + ' (' + full[6] + ')"><img src="images/info32.png" height="16" alt="" class="highqual" /></a></center>';
-                                       if (full[11] == 'secondary'){
-                                           response += '<div style="position:relative;left:-60px;"><span class="watermark"><center>SECONDARY</center></span></div>';
-                                       }
-                                   } else {
-                                       response = '<center>'+full[3]+'</center>';
-                                   }
-                               } else {
-                                   response = '<center>'+full[3]+'</center>';
-                               }
-                               return response;
+                               return issueStatus(full, true);
                            }
                        },
                        {
@@ -1726,40 +1749,7 @@
                            "targets": [5],
                            "visible": true,
                            "render": function (data,type,full){
-                               issueimg = '<img src="images/issueinfo_grey.png" height="25" width="25" title="Retrieve Issue Details" class="highqual" style="margin:2px 1px 3px 3px;" />';
-                               var displayline = '<a id="manqueueit" name="manqueueit" title="Search for issue" href="#"><img src="images/search.png" height="25" width="25" style="margin:2px 1px 3px 3px;" /></a>';
-                               if (full[3] == 'Skipped' || full[3] == 'Ignored'){
-                                   displayline += '<a id="queueit" name="queueit" title="Mark issue as Wanted" href="#"><img src="images/wanted_icon.png" height="25" width="25" style="margin:2px 1px 3px 3px;" /></a>';
-                               } else if (full[3] == 'Wanted'){
-                                   displayline += '<a id="unqueueit" name="unqueueit" title="Mark issue as Skipped" href="#"><img src="images/skipped_icon.png" height="25" width="25" style="margin:2px 1px 3px 3px;" /></a>';
-                               } else if (full[3] == 'Snatched'){
-                                   displayline += '<a id="queueit" name="queueit" title="Mark issue as Wanted" href="#"><img src="images/wanted_icon.png" height="25" width="25" style="margin:2px 1px 3px 3px;" /></a>';
-                                   displayline += '<a id="retryit" name="retryit" title="Retry the same download again" href="#"><img src="images/retry_icon.png" height="25" width="25" style="margin:2px 1px 3px 3px;" /></a>';
-                                   displayline += '<a id="unqueueit" name="queueit" title="Mark issue as Skipped" href="#"><img src="images/skipped_icon.png" height="25" width="25" style="margin:2px 1px 3px 3px;" /></a>';
-                                   displayline += '<a id="failit" name="failit" title="Mark issue as Failed" href="#"><img src="images/failed.png" class="highqual" height="25" width="25" style="margin:2px 1px 3px 3px;" /></a>';
-                               } else if (full[3] == 'Archived'){
-                                   displayline += '<a id="queueit" name="queueit" title="Mark issue as Wanted" href="#"><img src="images/wanted_icon.png" height="25" width="25" style="margin:2px 1px 3px 3px;" /></a>';
-                                   displayline += '<a id="unqueueit" name="queueit" title="Mark issue as Skipped" href="#"><img src="images/skipped_icon.png" height="25" width="25" style="margin:2px 1px 3px 3px;" /></a>';
-                               } else if (full[3] == 'Downloaded'){
-                                   displayline += '<a id="unqueueit" name="queueit" title="Mark issue as Skipped" href="#"><img src="images/skipped_icon.png" height="25" width="25" style="margin:2px 1px 3px 3px;" /></a>';
-                                   displayline += '<a id="failit" name="failit" title="Mark issue as Failed" href="#"><img src="images/failed.png" class="highqual" height="25" width="25" style="margin:2px 1px 3px 3px;" /></a>';
-                                   if (full[5]){
-                                        if (full[5].toLowerCase().indexOf('.cbz') >=0){
-                                            issueimg = '<img src="images/issueinfo_blue.png" height="25" width="25" title="View CBZ Issue Details" class="highqual" style="margin:2px 1px 3px 3px;" />';
-                                        } else if (full[5].toLowerCase().indexOf('.cbr') >=0){
-                                            issueimg = '<img src="images/issueinfo_orange.png" height="25" width="25" title="View CBR Issue Details" class="highqual" style="margin:2px 1px 3px 3px;" />';
-                                        }
-                                   }
-                                   if (document.getElementById("meta_enabled").value == 'True' || document.getElementById("meta_cbr2cbz").value == 'True'){
-                                       displayline += '<a id="metatag" name="metatag" title="Manually meta-tag issue" href="#"><img src="images/comictagger.png" height="25" width="25" style="margin:2px 1px 3px 3px;" /></a>';
-                                   }
-                               }
-                               displayline += '<a id="listbox" name="listbox" href="#issue-box" class="issue-window">'+issueimg+'</a>';
-                               if (full[3] == 'Downloaded'){
-                                   displayline += '<a id="readlistadd" name="readlistadd" title="Add to Reading List" href="#"><img src="images/glasses-icon.png" height="25" width="25" style="margin:2px 1px 3px 3px;" /></a>';
-                                   displayline += '<a href="downloadthis?issueid='+String(full[4])+'" title="Download this issue"><img src="images/download_icon.png" height="25" width="25" style="margin:2px 1px 3px 3px;" /></a>';
-                               }
-                               return displayline;
+                               return issueActions(full, '');
                            }
                        },
                        {
@@ -1792,12 +1782,15 @@
                     "displayLength": 25,
                     "lengthMenu": [[10, 15, 25, 50, 100, 200, -1], [10, 15, 25, 50, 100, 200, 'All' ]],
                     "language": {
-                         "search":"Filter:",
-                         "lengthMenu":"Show _MENU_ issues per page",
-                         "emptyTable": "No information available",
-                         "info":"Showing _START_ to _END_ of _TOTAL_ issues",
-                         "infoEmpty":"Showing 0 to 0 of 0 issues",
-                         "infoFiltered":"(filtered from _MAX_ total issues)"
+                         "search": "",
+                         "searchPlaceholder": "Filter issues",
+                         "lengthMenu": "_MENU_ per page",
+                         "emptyTable": "No issues match these filters.",
+                         "zeroRecords": "No issues match these filters.",
+                         "info": "_START_–_END_ of _TOTAL_ issues",
+                         "infoEmpty": "No issues",
+                         "infoFiltered": "(of _MAX_)",
+                         "paginate": { "first": "First", "last": "Last", "next": "Next", "previous": "Previous" }
                     },
                     "rowCallback": function (nRow, aData, iDisplayIndex, iDisplayIndexFull) {
                          if (aData[3] === "Skipped") {
@@ -1857,7 +1850,7 @@
                         document.getElementById("markannual").style.display = "none";
                         document.getElementById("annuals-select-all").checked = false;
                     },
-                    "sDom": '<"clear"><"clear"l><"clear">rt<"clear"i>',
+                    "sDom": 'rt<"dt-bottom"i>',
                     "destroy": true,
                     "processing": true,
                     "serverSide": true,
@@ -1931,16 +1924,7 @@
                            "targets": [5],
                            "visible": true,
                            "render": function (data,type,full){
-                               if (full[3] == 'Downloaded' || full[3] == 'Archived'){
-                                   if (full[5] !== null){
-                                       response = '<center>'+full[3] + '<a href="#" title="' + full[5] + ' (' + full[6] + ')"><img src="images/info32.png" height="16" alt="" class="highqual" /></a></center>';
-                                   } else {
-                                       response = '<center>'+full[3] + '</center>';
-                                   }
-                               } else {
-                                   response = '<center>'+full[3]+'</center>';
-                               }
-                               return response;
+                               return issueStatus(full, false);
                            }
                        },
                        {
@@ -1948,44 +1932,16 @@
                            "targets": [6],
                            "visible": true,
                            "render": function (data,type,full){
-                               issueimg = '<img src="images/issueinfo_grey.png" height="25" width="25" title="Retrieve Issue Details" class="highqual" style="margin:2px 1px 3px 3px;" />';
-                               var displayline = '<a id="amanqueueit" name="amanqueueit" title="Search for issue" href="#"><img src="images/search.png" height="25" width="25" style="margin:2px 1px 3px 3px;" /></a>';
-                               if (full[3] == 'Skipped' || full[3] == 'Ignored'){
-                                   displayline += '<a id="aqueueit" name="aqueueit" title="Mark issue as Wanted" href="#"><img src="images/wanted_icon.png" height="25" width="25" style="margin:2px 1px 3px 3px;" /></a>';
-                               } else if (full[3] == 'Wanted'){
-                                   displayline += '<a id="aunqueueit" name="aunqueueit" title="Mark issue as Skipped" href="#"><img src="images/skipped_icon.png" height="25" width="25" style="margin:2px 1px 3px 3px;" /></a>';
-                               } else if (full[3] == 'Snatched'){
-                                   displayline += '<a id="aqueueit" name="aqueueit" title="Mark issue as Wanted" href="#"><img src="images/wanted_icon.png" height="25" width="25" style="margin:2px 1px 3px 3px;" /></a>';
-                                   displayline += '<a id="aretryit" name="aretryit" title="Retry the same download again" href="#"><img src="images/retry_icon.png" height="25" width="25" style="margin:2px 1px 3px 3px;" /></a>';
-                                   displayline += '<a id="aunqueueit" name="aqueueit" title="Mark issue as Skipped" href="#"><img src="images/skipped_icon.png" height="25" width="25" style="margin:2px 1px 3px 3px;" /></a>';
-                                   displayline += '<a id="afailit" name="afailit" title="Mark issue as Failed" href="#"><img src="images/failed.png" class="highqual" height="25" width="25" style="margin:2px 1px 3px 3px;" /></a>';
-                               } else if (full[3] == 'Downloaded'){
-                                   displayline += '<a id="aunqueueit" name="aqueueit" title="Mark issue as Skipped" href="#"><img src="images/skipped_icon.png" height="25" width="25" style="margin:2px 1px 3px 3px;" /></a>';
-                                   displayline += '<a id="afailit" name="afailit" title="Mark issue as Failed" href="#"><img src="images/failed.png" class="highqual" height="25" width="25" style="margin:2px 1px 3px 3px;" /></a>';
-                                   if (full[5]){
-                                        if (full[5].toLowerCase().indexOf('.cbz') >=0){
-                                            issueimg = '<img src="images/issueinfo_blue.png" height="25" width="25" title="View CBZ Issue Details" class="highqual" style="margin:2px 1px 3px 3px;" />';
-                                        } else if (full[5].toLowerCase().indexOf('.cbr') >=0){
-                                            issueimg = '<img src="images/issueinfo_orange.png" height="25" width="25" title="View CBR Issue Details" class="highqual" style="margin:2px 1px 3px 3px;" />';
-                                        }
-                                   }
-                                   if (document.getElementById("meta_enabled").value == 'True' || document.getElementById("meta_cbr2cbz").value == 'True'){
-                                       displayline += '<a id="ametatag" name="ametatag" title="Manually meta-tag issue" href="#"><img src="images/comictagger.png" height="25" width="25" style="margin:2px 1px 3px 3px;" /></a>';
-                                   }
-                               }
-                               displayline += '<a id="alistbox" name="alistbox" href="#issue-box" class="issue-window">'+issueimg+'</a>';
-                               return displayline;
+                               return issueActions(full, 'a');
                            }
                        },
                     ],
                     "paging": false,
                     "language": {
-                         "search":"Filter:",
-                         "lengthMenu":"Show _MENU_ annuals per page",
-                         "emptyTable": "No information available",
-                         "info":"Showing _START_ to _END_ of _TOTAL_ annuals",
-                         "infoEmpty":"Showing 0 to 0 of 0 annuals",
-                         "infoFiltered":"(filtered from _MAX_ total annuals)"
+                         "emptyTable": "No annuals.",
+                         "info": "_TOTAL_ annuals",
+                         "infoEmpty": "No annuals",
+                         "infoFiltered": "(of _MAX_)"
                     },
                     "rowGroup": {
                          dataSrc: 10,
