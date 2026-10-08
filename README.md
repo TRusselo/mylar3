@@ -204,7 +204,7 @@ A couple of years ago, a multi-drive failure caused by bad HDD power splitters (
 
 Recently, I teamed up with Claude to clean up the mess, get Mylar3 running, and backfill the missing issues. In the process, I fixed a few bugs and submitted some PRs. When I finally tracked down the right Discord, I found out active development on Mylar3 had effectively wrapped up as the devs moved on to new projects.
 
-That left me with a choice: fork Mylar3 or find something else. I looked into a newer project on the scene, but it was missing several key features I relied on. Wanting to collaborate and avoid duplicating effort, I reached out to the dev and offered to help port over Mylar's missing features.
+That left me with a choice: fork Mylar3 or find something else. I looked into a newer project on the scene, but it was missing several key features I relied on. Wanting to collaborate and avoid duplicating effort, I reached out to the dev and offered to help port over missing features from Mylar.
 
 My offer was promptly—and surprisingly rudely—rejected.
 
