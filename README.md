@@ -200,12 +200,15 @@ Thank you to:
 - [ComicTagger](https://github.com/comictagger/comictagger), [ComicVine](https://comicvine.gamespot.com/), and [linuxserver.io](https://www.linuxserver.io/) for the container base.
 
 ## The Backstory
-A couple years ago, I had a multi-drive failure on my unraid sever due to bad HDD power splitter cables. (dont add more splitters). I ended up with thousands of random corrupted files in my collection. almost 4000 of 33,000 files. I'd been putting off fixing it for a while not knowing where to start.  I recently put Claude at the task of sorting it out and getting mylar3 working and filling the gaps. After finding a few bugs in Mylar3, i submitted a few PRs, not being able to contact the dev team on discord. After submitting a few PRs, someone pointed me to the correct discord, and find out they are not working on mylar3 much more and will be moving on to new projects.
+A couple of years ago, a multi-drive failure caused by bad HDD power splitters (lesson learned: don't use power splitters) left me with around 4,000 corrupted files out of 33,000. Paralyzed by the scale of it, I put off fixing it for a long time.
 
-I had 2 choices, fork and continue on my own, or find a new program. I heard there was a new project on the block, and checked it out, it was missing many features I needed, but did not want to step on the toes of a new, upcoming project, and I would rather not duplicate work that others are doing, plus, I think I would like to work with others on a dev project for the first time. So, I decided to reach out to him and offer my help porting missing features from mylar to his project, and help him build.
-My offer was promptly rejected. surprisingly rudely, actually.
+Recently, I teamed up with Claude to clean up the mess, get Mylar3 running, and backfill the missing issues. In the process, I fixed a few bugs and submitted some PRs. When I finally tracked down the right Discord, I found out active development on Mylar3 had effectively wrapped up as the devs moved on to new projects.
 
-Here is Issuarr.  An AI rewrite, redesign and expansion of Mylar.
+That left me with a choice: fork Mylar3 or find something else. I looked into a newer project on the scene, but it was missing several key features I relied on. Wanting to collaborate and avoid duplicating effort, I reached out to the dev and offered to help port over Mylar's missing features.
+
+My offer was promptly—and surprisingly rudely—rejected.
+
+So, here is Issuarr: an AI-assisted rewrite, redesign, and expansion of Mylar.
 
 ## License
 
